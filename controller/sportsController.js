@@ -10,7 +10,7 @@ const uniqid = require('uniqid');
 const redisCreateClient = require('redis').createClient;
 const redisClient = redisCreateClient();
 (async () => {
-  await redisClient.connect();
+    await redisClient.connect();
 })();
 redisClient.on('error', (err) => console.log('Redis Client Error', err));
 
@@ -294,10 +294,10 @@ exports.getHistoryAction = async (req, res, next) => {
         }
         resultUsers.push(history[i].userId)
     }
-    let userData = await userModel.find({_id: {$in : resultUsers}})
+    let userData = await userModel.find({ _id: { $in: resultUsers } })
 
     let usersObj = {}
-    userData.map(e=>usersObj[e._id]=e)
+    userData.map(e => usersObj[e._id] = e)
 
     for (var i in multiResult) {
         if (multiResult[i].length > 1) {
@@ -459,7 +459,7 @@ exports.getLeagueAction = async (req, res, next) => {
 
         let sportsData = await redisClient.get(`leagueData_${leagueIdArray[i]}`);
 
-        if(!sportsData) {
+        if (!sportsData) {
             console.log('from DB');
             sportsData = await bwinPrematchModel.findOne({ LeagueId: leagueIdArray[i] }).sort(sortCondition);
             await redisClient.set(`leagueData_${leagueIdArray[i]}`, JSON.stringify(sportsData));

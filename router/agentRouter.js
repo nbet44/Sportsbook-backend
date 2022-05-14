@@ -10,4 +10,5 @@ router.post("/update-balance", agentController.updateBalance);
 router.post("/get-transaction", agentController.getTransaction);
 router.post("/update-password", agentController.updatePassword);
 router.post("/update-user", agentController.updateUser);
+router.post("/user-manage-angent", agentController.userManageAgent);
 module.exports = router;

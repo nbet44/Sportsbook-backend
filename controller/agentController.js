@@ -31,6 +31,56 @@ exports.updateUser = async (req, res, next) => {
     return res.json({ status: 200, data: agentUsers });
 }
 
+exports.userManageAgent = async (req, res, next) => {
+    var result = [];
+    var data = req.body;
+    var condition = {
+        agentId: data.agentId
+    }
+    // if(data.filter.status) condition = status : true
+    var userData = await baseController.Bfind(userModel, condition);
+    for (var i in userData) {
+        var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
+        var openBets = 0;
+        var closeBets = 0;
+        var winBets = 0;
+        var loseBets = 0;
+        for (var j in history) {
+            var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
+            if (betHistory.status === "pending") {
+                openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
+            } else if (betHistory.status === "win") {
+                winBets = winBets + parseInt(betHistory.winAmount)
+            } else if (betHistory.status === "lose") {
+                loseBets = loseBets + parseInt(betHistory.amount)
+            } else {
+                closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
+            }
+        }
+
+        var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } })
+        result.push({
+            userId: userData[i]._id,
+            name: userData[i].username,
+            status: 'online',
+            credit: credit.length ? credit[0].amount : 0,
+            risk: userData[i].maxBetLimit,
+            openBets: openBets,
+            closeBets: closeBets,
+            turnover: winBets - loseBets,
+            discount: 0,
+            total: winBets - loseBets + userData[i].balance + 0,
+            totalNet: winBets - loseBets + userData[i].balance,
+            agetnCommiPer: 0,
+            platformCommi: 0,
+            agetnCommi: 0,
+            username: userData[i].username
+        })
+    }
+    res.json({ status: 200, data: result });
+    return true;
+}
+
 exports.updatePassword = async (req, res, next) => {
     var data = req.body;
     console.log(data);
