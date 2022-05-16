@@ -17,7 +17,7 @@ const fs = require('fs');
 var prematchTeamNameData = "";
 var liveTeamNameData = "";
 
-module.exports = async (io) => {
+module.exports = async () => {
     const getLiveDataMatch = async () => {
         request = {
             method: "get",
@@ -451,10 +451,10 @@ module.exports = async (io) => {
     }, 1000 * 5);
 
     setInterval(async function () {
-      console.log("refresh");
-      await getRealtimePreData()
-      await getLiveDataMatch()
-      await removeOldMatchs()
+        console.log("refresh");
+        await getRealtimePreData()
+        await getLiveDataMatch()
+        await removeOldMatchs()
     }, 1000 * 30);
 
     // io.on("connection", async (socket) => {

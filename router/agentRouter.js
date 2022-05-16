@@ -5,6 +5,7 @@ const agentController = require("../controller/agentController");
 router.post("/get", agentController.getAgentAction);
 router.post("/remove", agentController.removeAgentAction);
 router.post("/get-users", agentController.getUsersAction);
+router.post("/get-users-all", agentController.getAllUsersAction);
 router.post("/get-token", agentController.getTokenAction);
 router.post("/update-balance", agentController.updateBalance);
 router.post("/get-transaction", agentController.getTransaction);

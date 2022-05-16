@@ -14,10 +14,13 @@ const userModel = () => {
         access_token: { type: String },
         sessionId: { type: String },
         status: { type: String },
+        isOnline: { type: Boolean },
         permission: { type: Object },
         role: { type: String, default: "user" },
         pid: { type: String },
         agentShare: { type: Number, default: 85 },
+        agentCommission: { type: Number, default: 0 },
+        platformCommission: { type: Number, default: 0 },
         agentId: { type: String },
         level: { type: String, default: "normal" },
         maxBetLimit: { type: Number, default: 400 },
@@ -32,6 +35,8 @@ const userModel = () => {
         prematchSpread: { type: Object },
         liveSpread: { type: Object },
         mixSpread: { type: Object },
+        ratio: { type: Object },
+        setting: { type: Object },
         created: { type: Date, default: Date.now },
         updated: { type: Date }
     });
