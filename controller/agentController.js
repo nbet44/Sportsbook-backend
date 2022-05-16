@@ -81,6 +81,83 @@ exports.userManageAgent = async (req, res, next) => {
     return true;
 }
 
+exports.agentInfoLf = async (req, res, next) => {
+    var data = req.body;
+    var userData = await baseController.Bfind(userModel, { _id: data.agentId });
+    var minusBalance = await paymentHistoryModel.aggregate([
+        {
+            $match: {
+                $and: [
+                    { agentId: data.agentId },
+                    { created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week)) } }
+                ]
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: "$amount" },
+            }
+        }
+    ])
+    if (userData && minusBalance) {
+        var rdata = {
+            totalBalance: { value: `${userData[0].balance + minusBalance[0].total}  ${userData[0].currency}`, label: 'Total Balance' },
+            balanceSpend: { value: `${minusBalance[0].total}  ${userData[0].currency}`, label: 'Balance Spend' },
+            currentBalance: { value: `${userData[0].balance}  ${userData[0].currency}`, label: 'Current Balance' },
+            sportsCommission: { value: `${0} %`, label: 'Sports Commission' },
+            casinoCommission: { value: `${0} %`, label: 'Casino Commission' },
+            sportsDiscount: { value: `${0} ${userData[0].currency}`, label: 'Sports Discount' },
+            backupCredit: { value: `${0} ${userData[0].currency}`, label: 'Backup Credit' },
+            userBackupCredit: { value: `${0} ${userData[0].currency}`, label: 'User Backup Credit' }
+        }
+        return res.json({ status: 200, data: rdata })
+    } else {
+        return res.json({ status: 400, data: 'no agent' })
+    }
+}
+
+exports.agentInfoRg = async (req, res, next) => {
+    var data = req.body;
+    var turnover = 0
+    var userData = await baseController.Bfind(userModel, { agentId: data.agentId });
+    for (var i in userData) {
+        var totalBalance = await bwinHistoryModel.aggregate([
+            {
+                $match: {
+                    $and: [
+                        { userId: userData[i]._id },
+                        { created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week)) } }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$amount" },
+                }
+            }
+        ])
+        if (totalBalance.length) {
+            console.log(totalBalance)
+            turnover = turnover + Number(totalBalance[0].total)
+        }
+    }
+
+    var rdata = {
+        turnover: { value: `${turnover} ${userData[0].currency}`, label: 'Turnover' },
+        totalDiscount: { value: `${turnover} ${userData[0].currency}`, label: 'Total Discount' },
+        agentProfits: { value: `${turnover} %`, label: 'Agent Profits' },
+        platformProfits: { value: `${turnover} %`, label: 'Platform profits' },
+        platformDebt: { value: `${turnover} ${userData[0].currency}`, label: 'Platform Debt' },
+    }
+    if (userData) {
+        return res.json({ status: 200, data: rdata })
+    } else {
+        return res.json({ status: 400, data: 'no users' })
+    }
+}
+
 exports.updatePassword = async (req, res, next) => {
     var data = req.body;
     console.log(data);
