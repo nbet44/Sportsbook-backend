@@ -23,40 +23,44 @@ module.exports = async () => {
             method: "get",
             url: "https://api.b365api.com/v1/bwin/inplay?token=" + token,
         };
-        response = await axios(request);
-        if (response.data.success === 1) {
-            let data = response.data.results
-            let sendEventIds = []
-            let pages = Math.ceil(data.length / 10)
-            for (let i = 0; i < pages; i++) {
-                let tempEventIds = ""
-                for (let j = i * 10; j < (i + 1) * 10; j++) {
-                    if (data[j]) {
-                        var saveData = data[j];
-                        saveData.type = "inplay";
-                        saveData.Id = saveData.Id.replace(":", "0");
-                        await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
-                        var isCheck = await baseController.BfindOneAndUpdate(
-                            bwinInPlayModel,
-                            { Id: saveData.Id },
-                            saveData
-                        );
-                        tempEventIds += saveData.Id
-                        if (!isCheck) {
-                            console.log("---" + saveData.Id + "---");
-                        }
-                        if (j + 1 != (i + 1) * 10) {
-                            tempEventIds += ","
+        try {
+            response = await axios(request);
+            if (response.data.success === 1) {
+                let data = response.data.results
+                let sendEventIds = []
+                let pages = Math.ceil(data.length / 10)
+                for (let i = 0; i < pages; i++) {
+                    let tempEventIds = ""
+                    for (let j = i * 10; j < (i + 1) * 10; j++) {
+                        if (data[j]) {
+                            var saveData = data[j];
+                            saveData.type = "inplay";
+                            saveData.Id = saveData.Id.replace(":", "0");
+                            await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
+                            var isCheck = await baseController.BfindOneAndUpdate(
+                                bwinInPlayModel,
+                                { Id: saveData.Id },
+                                saveData
+                            );
+                            tempEventIds += saveData.Id
+                            if (!isCheck) {
+                                console.log("---" + saveData.Id + "---");
+                            }
+                            if (j + 1 != (i + 1) * 10) {
+                                tempEventIds += ","
+                            }
                         }
                     }
+                    sendEventIds.push(tempEventIds)
                 }
-                sendEventIds.push(tempEventIds)
+                let funcs = []
+                for (let i in sendEventIds) {
+                    funcs.push(getRealtimeLiveMarket(sendEventIds[i]))
+                }
+                Promise.all(funcs)
             }
-            let funcs = []
-            for (let i in sendEventIds) {
-                funcs.push(getRealtimeLiveMarket(sendEventIds[i]))
-            }
-            Promise.all(funcs)
+        } catch (error) {
+            console.log('get live data error')
         }
     }
 
@@ -423,29 +427,33 @@ module.exports = async () => {
         data.append('siteId', XG_siteId);
         data.append('publicKey', XG_publicKey);
 
-        var request = {
-            method: 'post',
-            url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
-            headers: {
-                ...data.getHeaders()
-            },
-            data: data
-        };
+        try {
+            var request = {
+                method: 'post',
+                url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
+                headers: {
+                    ...data.getHeaders()
+                },
+                data: data
+            };
 
-        var response = await axios(request);
-        if (response.data.status === true) {
-            var data = response.data.data;
-            for (var i in data) {
-                var saveData = data[i];
-                var isCheck = await baseController.BfindOneAndUpdate(
-                    xpressGameModel,
-                    { gameId: saveData.gameId },
-                    saveData
-                );
-                if (!isCheck) {
-                    console.log("---" + saveData.Id + "---");
+            var response = await axios(request);
+            if (response.data.status === true) {
+                var data = response.data.data;
+                for (var i in data) {
+                    var saveData = data[i];
+                    var isCheck = await baseController.BfindOneAndUpdate(
+                        xpressGameModel,
+                        { gameId: saveData.gameId },
+                        saveData
+                    );
+                    if (!isCheck) {
+                        console.log("---" + saveData.Id + "---");
+                    }
                 }
             }
+        } catch (error) {
+            console.log('get game list error')
         }
         await removeOldMatchs()
     }, 1000 * 5);

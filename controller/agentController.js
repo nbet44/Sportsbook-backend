@@ -311,7 +311,7 @@ exports.updateBalance = async (req, res, next) => {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.pid })
             // if (parent.pid !== "0") {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay, platformCommission: data.platformCommission });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Something wrong from parent agent" })
                 return false
@@ -340,7 +340,7 @@ exports.updateBalance = async (req, res, next) => {
                 return false
             }
             // }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay, platformCommission: data.platformCommission });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -353,6 +353,14 @@ exports.updateBalance = async (req, res, next) => {
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from payment history" });
                 return false;
+            }
+        }
+
+        if (data.platformCommission || data.platformCommission == 0) {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { platformCommission: data.platformCommission })
+            var users = await baseController.Bfind(userModel, { agentId: data.userId })
+            for (let i in users) {
+                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission })
             }
         }
         var tableData = await baseController.Bfind(userModel, { pid: data.pid });
