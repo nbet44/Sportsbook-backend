@@ -16,8 +16,8 @@ var FormData = require('form-data');
 const fs = require('fs');
 var prematchTeamNameData = "";
 var liveTeamNameData = "";
-
-module.exports = async () => {
+var onlineUsers = {}
+module.exports = async (io) => {
     const getLiveDataMatch = async () => {
         request = {
             method: "get",
@@ -225,11 +225,8 @@ module.exports = async () => {
     }
 
     const setScoreFinished = async () => {
-        console.log("============================")
         var data = await baseController.Bfind(bwinEventModel, { 'Scoreboard.period': 'Finished' })
-        console.log(data.length)
         for (var i in data) {
-            console.log(data[i].Id)
             let config = {
                 method: 'get',
                 url: "https://api.b365api.com/v1/bwin/result?token=" + token + "&event_id=" + data[i].Id,
@@ -248,7 +245,6 @@ module.exports = async () => {
                 if (isCheckHistory.length > 0) {
                     await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id }, { result: scores[0] + "-" + scores[1], status: "lose" })
                 }
-                console.log(history)
                 for (var i in history) {
                     var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
                     if (userData) {
@@ -290,7 +286,6 @@ module.exports = async () => {
                 }
                 await baseController.data_save(saveData, leagueTeamModel)
                 prematchTeamNameData = prematchTeamNameData + "\n" + data[i];
-                console.log(saveData)
             }
         }
     }
@@ -308,7 +303,6 @@ module.exports = async () => {
                 }
                 await baseController.data_save(saveData, leagueTeamModel)
                 liveTeamNameData = liveTeamNameData + "\n" + data[i];
-                console.log(saveData)
             }
         }
     }
@@ -317,7 +311,6 @@ module.exports = async () => {
         fs.appendFile(name, data, 'utf8',
             function (err) {
                 if (err) throw err;
-                console.log("have done")
             });
         // fs.writeFile(name, data, function (err) {
         //   if (err) return console.log(err);
@@ -334,10 +327,8 @@ module.exports = async () => {
                 var autoWeeklyCredit = agentData[i].autoWeeklyCredit
                 if (todayDay === parseInt(agentData[i].weeklyCreditResetDay.value)) {
                     console.log("--- match weekly credit day ---");
-                    console.log(agentData[i].weeklyCreditResetDay.value)
                     if (registeredHours === new Date().getHours()) {
                         console.log("--- match weekly credit hour ---");
-                        console.log(new Date().getHours())
                         var parentData = await baseController.BfindOne(userModel, { _id: agentData[i].pid });
                         if (parseInt(parentData.balance) < parseInt(autoWeeklyCredit)) {
                             console.log("--- parent balance isn't enough for auto weekly credit ---")
@@ -463,12 +454,25 @@ module.exports = async () => {
         await getRealtimePreData()
         await getLiveDataMatch()
         await removeOldMatchs()
-    }, 1000 * 30);
+    }, 1000 * 60 * 30);
 
-    // io.on("connection", async (socket) => {
-    //   console.log("--- socket id ---");
-    //   console.log(socket.id);
-    //   console.log("--- socket id ---");
-    //   await makeWeeklyCredit()
-    // });
+    io.on("connection", async (socket) => {
+        var query = socket.handshake.query;
+        var roomName = query.roomName;
+        if (roomName && roomName != 'null') {
+            onlineUsers[socket.id] = roomName;
+            await userModel.findOneAndUpdate({ _id: roomName }, { isOnline: true })
+            socket.join(roomName);
+            console.log(roomName + ' online');
+        }
+
+        socket.on('disconnect', async function () {
+            if (onlineUsers[socket.id]) {
+                await userModel.findOneAndUpdate({ _id: onlineUsers[socket.id] }, { isOnline: false });
+                console.log(socket.id, " disconnected")
+            }
+            delete onlineUsers[socket.id];
+        });
+        //   await makeWeeklyCredit()
+    });
 };
