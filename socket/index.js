@@ -17,6 +17,7 @@ const fs = require('fs');
 var prematchTeamNameData = "";
 var liveTeamNameData = "";
 var onlineUsers = {}
+
 module.exports = async (io) => {
     const getLiveDataMatch = async () => {
         request = {
@@ -272,7 +273,6 @@ module.exports = async (io) => {
         // await bwinEventModel.deleteMany({ $or: [{ 'Scoreboard.period': 'Finished' }, { updatedAt: { $lte: currentDate } }] })
     }
 
-    // function writePrematchTeamNameData(HomeTeam, AwayTeam) {
     async function writePrematchTeamNameData(data) {
         var nameType = { 0: "league", 1: "country", 2: "team", 3: "team" }
         for (var i in data) {
@@ -382,8 +382,6 @@ module.exports = async (io) => {
         // });
     }
 
-    // run()
-
     setTimeout(async function () {
         var monthArray = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
         var currentDate = new Date();
@@ -473,6 +471,5 @@ module.exports = async (io) => {
             }
             delete onlineUsers[socket.id];
         });
-        //   await makeWeeklyCredit()
     });
 };

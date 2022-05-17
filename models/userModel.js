@@ -21,6 +21,8 @@ const userModel = () => {
         agentShare: { type: Number, default: 85 },
         agentCommission: { type: Number, default: 0 },
         platformCommission: { type: Number, default: 0 },
+        sportsCommission: { type: Number, default: 0 },
+        casinoCommission: { type: Number, default: 0 },
         agentId: { type: String },
         level: { type: String, default: "normal" },
         maxBetLimit: { type: Number, default: 400 },

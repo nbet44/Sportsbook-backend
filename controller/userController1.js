@@ -5,6 +5,7 @@ const baseController = require("./baseController");
 const { userModel } = require("../models/userModel");
 const { paymentHistoryModel } = require('../models/paymentHistoryModel');
 const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinEventModel, bwinResultModel } = require("../models/bwinSportsModel");
+// const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinEventModel, bwinResultModel } = require("../models/bwinSportsModel");
 const { loginHistoryModel } = require("../models/loginHistoryModel");
 const tokgen = new TokenGenerator();
 
