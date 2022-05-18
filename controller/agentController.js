@@ -404,11 +404,11 @@ exports.updateBalance = async (req, res, next) => {
             }
         }
 
-        if (data.platformCommission || data.platformCommission == 0) {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { platformCommission: data.platformCommission })
+        if (data.platformCommission || data.platformCommission == 0 || data.sportsCommission || data.sportsCommission == 0 || data.casinoCommission || data.casinoCommission == 0) {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             var users = await baseController.Bfind(userModel, { agentId: data.userId })
             for (let i in users) {
-                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission })
+                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             }
         }
         var tableData = await baseController.Bfind(userModel, { pid: data.pid });
