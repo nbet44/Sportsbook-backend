@@ -5,6 +5,7 @@ const userModel = () => {
     var modelSchema = new Schema({
         userId: { type: String, unique: true },
         username: { type: String },
+        name: { type: String },
         password: { type: String },
         firstname: { type: String },
         lastname: { type: String },
@@ -14,7 +15,7 @@ const userModel = () => {
         access_token: { type: String },
         sessionId: { type: String },
         status: { type: String },
-        isOnline: { type: Boolean },
+        isOnline: { type: String, default: 'Offline' },
         permission: { type: Object },
         role: { type: String, default: "user" },
         pid: { type: String },
