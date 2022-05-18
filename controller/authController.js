@@ -147,6 +147,10 @@ exports.loginAction = async (req, res, next) => {
         res.json({ status: 300, data: "Invalid User" });
         return false;
     }
+    if (userData.isOnline == 'Blocked') {
+        res.json({ status: 300, data: "Your account is blocked" });
+        return false;
+    }
     var sessionData = {
         id: userData._id,
         userId: userData.userId,
