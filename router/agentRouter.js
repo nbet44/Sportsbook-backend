@@ -11,6 +11,7 @@ router.post("/update-balance", agentController.updateBalance);
 router.post("/get-transaction", agentController.getTransaction);
 router.post("/update-password", agentController.updatePassword);
 router.post("/update-user", agentController.updateUser);
+router.post("/update-user-mange", agentController.userManageUpdate);
 router.post("/user-manage-angent", agentController.userManageAgent);
 router.post("/agent-info-lf", agentController.agentInfoLf);
 router.post("/agent-info-rg", agentController.agentInfoRg);

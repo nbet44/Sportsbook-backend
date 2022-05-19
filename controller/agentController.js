@@ -81,6 +81,45 @@ exports.updateUser = async (req, res, next) => {
     return res.json({ status: 200, data: result });
 }
 
+exports.userManageUpdate = async (req, res, next) => {
+    var data = req.body;
+    var userData = await baseController.BfindOne(userModel, { _id: data.userId })
+    if (!userData) {
+        return res.json({ status: 300, data: "Invalid User" });
+    }
+    if (data.delete) {
+        var betData = await baseController.Bfind(bwinHistoryModel, { userId: data.userId, status: "pending" })
+        if (betData.length === 0) {
+            await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Blocked' })
+        } else {
+            return res.json({ status: 300, data: "pending bets" })
+        }
+    } else {
+        await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Offline' })
+    }
+    var update = {
+        level: data.level,
+        maxBetLimit: data.maxBetLimit,
+        prematchSpread: data.update.prematchSpread,
+        liveSpread: data.update.liveSpread,
+        mixSpread: data.update.mixSpread,
+        ratio: data.update.ratio,
+        ratioLive: data.update.ratioLive,
+        ratioSpacial: data.update.ratioSpacial,
+        setting: data.setting
+    }
+
+    if (data.update.username) update['username'] = data.update.username
+    if (data.update.password) update['password'] = data.update.password
+    var updatedUser = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, update)
+    if (!updatedUser) {
+        return res.json({ status: 300, data: "failed update" })
+    }
+
+    var result = await getUserMangeData(data)
+    return res.json({ status: 200, data: result });
+}
+
 exports.userManageAgent = async (req, res, next) => {
     var result = [];
     var data = req.body;
