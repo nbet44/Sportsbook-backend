@@ -182,3 +182,13 @@ exports.changePasswordAction = async (req, res, next) => {
         return false;
     }
 }
+
+const createAdmin = async () => {
+    var userData = await baseController.BfindOne(userModel, { userId: 'admin' })
+    if (!userData) {
+        var sdata = new userModel({ balance: 5000, role: 'admin', username: 'admin', userId: 'admin', password: '12345678', permission: { player: true, agent: true } });
+        await sdata.save()
+        console.log('admin account created')
+    }
+}
+createAdmin()
