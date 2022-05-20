@@ -7,17 +7,22 @@ const { paymentHistoryModel } = require('../models/paymentHistoryModel');
 const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinEventModel, bwinFavoriteModel } = require("../models/bwinSportsModel");
 const tokgen = new TokenGenerator();
 
-const getUserMangeData = async (data) => {
-    var condition = {
-        role: 'user'
+// user data management part
+const getUserData = async (data) => {
+    var agent = []
+    var user = {}
+    var agentData = []
+    if (data.filter.role === 'agent') {
+        agentData = await baseController.Bfind(userModel, { role: 'agent', _id: data.filter.agentId });
+    } else {
+        agentData = await baseController.Bfind(userModel, { role: 'agent' });
     }
-    if (data.role !== 'admin') condition['agentId'] = data.agentId
-    if (data.filter.status) condition['isOnline'] = 'Online'
-
-    var rdata = []
-    var agentData = await baseController.Bfind(userModel, { role: 'agent' });
     for (var h in agentData) {
-        var userData = await baseController.Bfind(userModel, { role: 'user', agentId: agentData[h]._id });
+        agent.push(agentData[h])
+
+        var condition = { role: 'user', agentId: agentData[h]._id }
+        if (data.filter.status) condition['isOnline'] = 'Online'
+        var userData = await baseController.Bfind(userModel, condition);
         var result = [];
         for (var i in userData) {
             var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
@@ -26,19 +31,19 @@ const getUserMangeData = async (data) => {
             var winBets = 0;
             var loseBets = 0;
             for (var j in history) {
-                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } });
                 if (betHistory.status === "pending") {
-                    openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
+                    openBets = openBets + parseInt(betHistory.amount)
                 } else if (betHistory.status === "win") {
                     winBets = winBets + parseInt(betHistory.winAmount)
                 } else if (betHistory.status === "lose") {
                     loseBets = loseBets + parseInt(betHistory.amount)
                 } else {
-                    closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
+                    closeBets = closeBets + parseInt(betHistory.amount)
                 }
             }
 
-            var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } })
+            var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } })
             var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
             var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
             var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
@@ -57,11 +62,180 @@ const getUserMangeData = async (data) => {
                 agetnCommi: userData[i].balance * agentCommiPer * 0.01,
             })
         }
-        rdata.push({ agent: agentData[h], user: result })
+        user[agentData[h]._id] = result
+    }
+    return { agent, user }
+}
+
+exports.getUserManagement = async (req, res, next) => {
+    var data = req.body
+    var rdata = await getUserData(data)
+    return res.json({ status: 200, data: rdata });
+}
+
+exports.updateUserManagement = async (req, res, next) => {
+    var data = req.body;
+    var userData = await baseController.BfindOne(userModel, { _id: data.update._id })
+    if (!userData) {
+        return res.json({ status: 300, data: "Invalid User" });
+    }
+    if (data.delete) {
+        var betData = await baseController.Bfind(bwinHistoryModel, { userId: data.update._id, status: "pending" })
+        if (betData.length === 0) {
+            await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, { isOnline: 'Blocked' })
+        } else {
+            return res.json({ status: 300, data: "pending bets" })
+        }
+    } else {
+        await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id, isOnline: { $ne: 'Online' } }, { isOnline: 'Offline' })
+    }
+    var update = {
+        level: data.level,
+        maxBetLimit: data.update.maxBetLimit,
+        prematchSpread: data.update.prematchSpread,
+        liveSpread: data.update.liveSpread,
+        mixSpread: data.update.mixSpread,
+        ratio: data.update.ratio,
+        ratioLive: data.update.ratioLive,
+        ratioSpacial: data.update.ratioSpacial,
+        setting: data.setting
     }
 
-    return rdata;
+    if (data.update.username) update['username'] = data.update.username
+    if (data.update.password) update['password'] = data.update.password
+    var updatedUser = await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, update)
+    if (!updatedUser) {
+        return res.json({ status: 300, data: "failed update" })
+    }
+    var pdata = {
+        filter: data.filter
+    }
+    var result = await getUserData(pdata)
+    return res.json({ status: 200, data: result });
 }
+
+exports.updateBalanceManagement = async (req, res, next) => {
+    var data = req.body;
+    delete data._id
+    if (data.role === "agent") {
+        if (data.extraCredit > 0) {
+            var parent = await baseController.BfindOne(userModel, { _id: data.pid })
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Something wrong from parent agent" })
+                return false
+            }
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from adding the user balance" });
+                return false;
+            }
+            saveData = {
+                ...data,
+                amount: data.extraCredit
+            }
+            isCheck = await baseController.data_save(saveData, paymentHistoryModel);
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from payment history" });
+                return false;
+            }
+        } else {
+            var parent = await baseController.BfindOne(userModel, { _id: data.pid })
+            // if (parent.pid !== "0") {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Something wrong from parent agent" })
+                return false
+            }
+            // }
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from adding the user balance" });
+                return false;
+            }
+            saveData = {
+                ...data,
+                amount: data.extraCredit
+            }
+            isCheck = await baseController.data_save(saveData, paymentHistoryModel);
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from payment history" });
+                return false;
+            }
+        }
+
+        if (data.platformCommission || data.platformCommission == 0 || data.sportsCommission || data.sportsCommission == 0 || data.casinoCommission || data.casinoCommission == 0) {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
+            var users = await baseController.Bfind(userModel, { agentId: data.userId })
+            for (let i in users) {
+                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
+            }
+        }
+        var tableData = await baseController.Bfind(userModel, { pid: data.pid });
+        var userData = await baseController.BfindOne(userModel, { _id: data.pid });
+        res.json({ status: 200, data: { tableData: tableData, userData: userData } });
+        return true;
+    } else if (data.role === "user") {
+        if (data.extraCredit > 0) {
+            var parent = await baseController.BfindOne(userModel, { _id: data.agentId })
+            // if (parent.pid !== "0") {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Something wrong from parent agent" })
+                return false
+            }
+            // }
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from adding the user balance" });
+                return false;
+            }
+            saveData = {
+                ...data,
+                amount: data.extraCredit
+            }
+            isCheck = await baseController.data_save(saveData, paymentHistoryModel);
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from payment history" });
+                return false;
+            }
+        } else {
+            var parent = await baseController.BfindOne(userModel, { _id: data.agentId })
+            // if (parent.pid !== "0") {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Something wrong from parent agent" })
+                return false
+            }
+            // }
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission });
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from adding the user balance" });
+                return false;
+            }
+            saveData = {
+                ...data,
+                amount: data.extraCredit
+            }
+            isCheck = await baseController.data_save(saveData, paymentHistoryModel);
+            if (!isCheck) {
+                res.json({ status: 300, data: "Wrong something from payment history" });
+                return false;
+            }
+        }
+        var tableData = await baseController.Bfind(userModel, { agentId: data.agentId });
+        var userData = await baseController.BfindOne(userModel, { _id: data.agentId });
+        res.json({ status: 200, data: { tableData: tableData, userData: userData } });
+        return true;
+    }
+    var rdata = await getUserData({ filter: data.filter })
+    res.json({ status: 200, data: rdata })
+}
+
+
+
+
+
 
 exports.updateUser = async (req, res, next) => {
     var data = req.body;
@@ -84,46 +258,7 @@ exports.updateUser = async (req, res, next) => {
         return res.json({ status: 300, data: "failed update" })
     }
 
-    var result = await getUserMangeData(data)
-    return res.json({ status: 200, data: result });
-}
-
-exports.userManageUpdate = async (req, res, next) => {
-    var data = req.body;
-    var userData = await baseController.BfindOne(userModel, { _id: data.userId })
-    if (!userData) {
-        return res.json({ status: 300, data: "Invalid User" });
-    }
-    if (data.delete) {
-        var betData = await baseController.Bfind(bwinHistoryModel, { userId: data.userId, status: "pending" })
-        if (betData.length === 0) {
-            await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Blocked' })
-        } else {
-            return res.json({ status: 300, data: "pending bets" })
-        }
-    } else {
-        await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Offline' })
-    }
-    var update = {
-        level: data.level,
-        maxBetLimit: data.maxBetLimit,
-        prematchSpread: data.update.prematchSpread,
-        liveSpread: data.update.liveSpread,
-        mixSpread: data.update.mixSpread,
-        ratio: data.update.ratio,
-        ratioLive: data.update.ratioLive,
-        ratioSpacial: data.update.ratioSpacial,
-        setting: data.setting
-    }
-
-    if (data.update.username) update['username'] = data.update.username
-    if (data.update.password) update['password'] = data.update.password
-    var updatedUser = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, update)
-    if (!updatedUser) {
-        return res.json({ status: 300, data: "failed update" })
-    }
-
-    var result = await getUserMangeData(data)
+    var result = await getUserData(data)
     return res.json({ status: 200, data: result });
 }
 
@@ -146,7 +281,7 @@ exports.userManageAgent = async (req, res, next) => {
             var winBets = 0;
             var loseBets = 0;
             for (var j in history) {
-                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } });
                 if (betHistory.status === "pending") {
                     openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
                 } else if (betHistory.status === "win") {
@@ -406,17 +541,14 @@ exports.removeAgentAction = async (req, res, next) => {
 exports.updateBalance = async (req, res, next) => {
     var data = req.body;
     delete data._id
-    console.log(data)
     if (data.role === "agent") {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.pid })
-            // if (parent.pid !== "0") {
             var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Something wrong from parent agent" })
                 return false
             }
-            // }
             var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
