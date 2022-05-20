@@ -8,52 +8,59 @@ const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinEventModel, bw
 const tokgen = new TokenGenerator();
 
 const getUserMangeData = async (data) => {
-    var result = [];
     var condition = {
         role: 'user'
     }
     if (data.role !== 'admin') condition['agentId'] = data.agentId
     if (data.filter.status) condition['isOnline'] = 'Online'
-    var userData = await baseController.Bfind(userModel, condition);
-    for (var i in userData) {
-        var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
-        var openBets = 0;
-        var closeBets = 0;
-        var winBets = 0;
-        var loseBets = 0;
-        for (var j in history) {
-            var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
-            if (betHistory.status === "pending") {
-                openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
-            } else if (betHistory.status === "win") {
-                winBets = winBets + parseInt(betHistory.winAmount)
-            } else if (betHistory.status === "lose") {
-                loseBets = loseBets + parseInt(betHistory.amount)
-            } else {
-                closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
-            }
-        }
 
-        var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } })
-        var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
-        var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
-        var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
-        result.push({
-            ...userData[i]._doc,
-            credit: credit.length ? credit[0].amount : 0,
-            risk: userData[i].maxBetLimit,
-            openBets: openBets,
-            closeBets: closeBets,
-            turnover: winBets - loseBets,
-            discount: discount,
-            total: winBets - loseBets + userData[i].balance,
-            totalNet: winBets - loseBets + userData[i].balance - discount,
-            agentCommiPer: agentCommiPer,
-            platformCommi: platformCommission,
-            agetnCommi: userData[i].balance * agentCommiPer * 0.01,
-        })
+    var rdata = []
+    var agentData = await baseController.Bfind(userModel, { role: 'agent' });
+    for (var h in agentData) {
+        var userData = await baseController.Bfind(userModel, { role: 'user', agentId: agentData[h]._id });
+        var result = [];
+        for (var i in userData) {
+            var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
+            var openBets = 0;
+            var closeBets = 0;
+            var winBets = 0;
+            var loseBets = 0;
+            for (var j in history) {
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
+                if (betHistory.status === "pending") {
+                    openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
+                } else if (betHistory.status === "win") {
+                    winBets = winBets + parseInt(betHistory.winAmount)
+                } else if (betHistory.status === "lose") {
+                    loseBets = loseBets + parseInt(betHistory.amount)
+                } else {
+                    closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
+                }
+            }
+
+            var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } })
+            var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
+            var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
+            var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
+            result.push({
+                ...userData[i]._doc,
+                credit: credit.length ? credit[0].amount : 0,
+                risk: userData[i].maxBetLimit,
+                openBets: openBets,
+                closeBets: closeBets,
+                turnover: winBets - loseBets,
+                discount: discount,
+                total: winBets - loseBets + userData[i].balance,
+                totalNet: winBets - loseBets + userData[i].balance - discount,
+                agentCommiPer: agentCommiPer,
+                platformCommi: platformCommission,
+                agetnCommi: userData[i].balance * agentCommiPer * 0.01,
+            })
+        }
+        rdata.push({ agent: agentData[h], user: result })
     }
-    return result;
+
+    return rdata;
 }
 
 exports.updateUser = async (req, res, next) => {
@@ -121,54 +128,59 @@ exports.userManageUpdate = async (req, res, next) => {
 }
 
 exports.userManageAgent = async (req, res, next) => {
-    var result = [];
-    var data = req.body;
-    var condition = {
-        role: 'user'
-    }
-    if (data.role !== 'admin') condition['agentId'] = data.agentId
-    if (data.filter.status) condition['isOnline'] = 'Online'
-    var userData = await baseController.Bfind(userModel, condition);
-    for (var i in userData) {
-        var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
-        var openBets = 0;
-        var closeBets = 0;
-        var winBets = 0;
-        var loseBets = 0;
-        for (var j in history) {
-            var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
-            if (betHistory.status === "pending") {
-                openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
-            } else if (betHistory.status === "win") {
-                winBets = winBets + parseInt(betHistory.winAmount)
-            } else if (betHistory.status === "lose") {
-                loseBets = loseBets + parseInt(betHistory.amount)
-            } else {
-                closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
-            }
-        }
+    var data = req.body
+    var agent = []
+    var user = {}
+    var agentData = await baseController.Bfind(userModel, { role: 'agent' });
+    for (var h in agentData) {
+        agent.push(agentData[h])
 
-        var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } })
-        var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
-        var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
-        var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
-        result.push({
-            ...userData[i]._doc,
-            credit: credit.length ? credit[0].amount : 0,
-            risk: userData[i].maxBetLimit,
-            openBets: openBets,
-            closeBets: closeBets,
-            turnover: winBets - loseBets,
-            discount: discount,
-            total: winBets - loseBets + userData[i].balance,
-            totalNet: winBets - loseBets + userData[i].balance - discount,
-            agentCommiPer: agentCommiPer,
-            platformCommi: platformCommission,
-            agetnCommi: userData[i].balance * agentCommiPer * 0.01,
-        })
+        var condition = { role: 'user', agentId: agentData[h]._id }
+        if (data.filter.status) condition['isOnline'] = 'Online'
+        var userData = await baseController.Bfind(userModel, condition);
+        var result = [];
+        for (var i in userData) {
+            var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
+            var openBets = 0;
+            var closeBets = 0;
+            var winBets = 0;
+            var loseBets = 0;
+            for (var j in history) {
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week)) } });
+                if (betHistory.status === "pending") {
+                    openBets = openBets + parseInt(betHistory.amount) // openBets = openBets + 1
+                } else if (betHistory.status === "win") {
+                    winBets = winBets + parseInt(betHistory.winAmount)
+                } else if (betHistory.status === "lose") {
+                    loseBets = loseBets + parseInt(betHistory.amount)
+                } else {
+                    closeBets = closeBets + parseInt(betHistory.amount) // closeBets = closeBets + 1
+                }
+            }
+
+            var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } })
+            var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
+            var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
+            var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
+            result.push({
+                ...userData[i]._doc,
+                credit: credit.length ? credit[0].amount : 0,
+                risk: userData[i].maxBetLimit,
+                openBets: openBets,
+                closeBets: closeBets,
+                turnover: winBets - loseBets,
+                discount: discount,
+                total: winBets - loseBets + userData[i].balance,
+                totalNet: winBets - loseBets + userData[i].balance - discount,
+                agentCommiPer: agentCommiPer,
+                platformCommi: platformCommission,
+                agetnCommi: userData[i].balance * agentCommiPer * 0.01,
+            })
+        }
+        user[agentData[h]._id] = result
     }
-    res.json({ status: 200, data: result });
-    return true;
+    return res.json({ status: 200, data: { agent, user } });
+
 }
 
 exports.agentInfoLf = async (req, res, next) => {
