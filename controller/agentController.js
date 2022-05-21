@@ -36,9 +36,9 @@ const getUserData = async (data) => {
                     openBets = openBets + parseInt(betHistory.amount)
                 } else if (betHistory.status === "win") {
                     winBets = winBets + parseInt(betHistory.winAmount)
+                    closeBets = closeBets + parseInt(betHistory.amount)
                 } else if (betHistory.status === "lose") {
                     loseBets = loseBets + parseInt(betHistory.amount)
-                } else {
                     closeBets = closeBets + parseInt(betHistory.amount)
                 }
             }
@@ -172,10 +172,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             }
         }
-        // var tableData = await baseController.Bfind(userModel, { pid: data.pid });
         userData = await baseController.BfindOne(userModel, { _id: data.pid });
-        // res.json({ status: 200, data: { tableData: tableData, userData: userData } });
-        // return true;
     } else if (data.role === "user") {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.agentId })
