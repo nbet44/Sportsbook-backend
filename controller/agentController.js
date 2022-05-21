@@ -1,3 +1,4 @@
+// const mongoose = require('mongoose');
 const { default: axios } = require("axios");
 const { uid } = require('uid');
 const TokenGenerator = require('uuid-token-generator');
@@ -183,7 +184,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false
             }
             // }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -206,7 +207,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false
             }
             // }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -221,10 +222,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false;
             }
         }
-        // var tableData = await baseController.Bfind(userModel, { agentId: data.agentId });
         userData = await baseController.BfindOne(userModel, { _id: data.agentId });
-        // res.json({ status: 200, data: { tableData: tableData, userData: userData } });
-        // return true;
     }
     var rdata = await getUserData({ filter: data.filter })
     res.json({ status: 200, data: { ...rdata, userData } })
@@ -372,8 +370,8 @@ exports.agentInfoRg = async (req, res, next) => {
                 {
                     $match: {
                         $and: [
-                            { userId: userData[i]._id },
-                            { created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week)) } }
+                            { userId: String(userData[i]._id) },
+                            { created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week.value)) } }
                         ]
                     }
                 },
@@ -400,10 +398,10 @@ exports.agentInfoRg = async (req, res, next) => {
 
     if (userData.length) {
         rdata.turnover.value = `${turnover} ${userData[0].currency}`
-        rdata.totalDiscount.value = `${turnover} ${userData[0].currency}`
-        rdata.agentProfits.value = `${turnover} %`
-        rdata.platformProfits.value = `${turnover} %`
-        rdata.platformDebt.value = `${turnover} ${userData[0].currency}`
+        rdata.totalDiscount.value = `${0} ${userData[0].currency}`
+        rdata.agentProfits.value = `${0} %`
+        rdata.platformProfits.value = `${0} %`
+        rdata.platformDebt.value = `0 ${userData[0].currency}`
     }
     return res.json({ status: 200, data: rdata })
 }

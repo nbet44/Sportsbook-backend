@@ -41,6 +41,8 @@ const userModel = () => {
         ratio: { type: Number, default: 0 },
         ratioLive: { type: Number, default: 0 },
         ratioSpacial: { type: Number, default: 0 },
+        sportsDiscount: { type: Number, default: 0 },
+        casinoDiscount: { type: Number, default: 0 },
         setting: {
             showRule: { type: Boolean, default: true },
             unlimitedMix: { type: Boolean, default: false },
