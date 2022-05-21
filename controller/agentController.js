@@ -116,6 +116,7 @@ exports.updateUserManagement = async (req, res, next) => {
 
 exports.updateBalanceManagement = async (req, res, next) => {
     var data = req.body;
+    var userData
     delete data._id
     if (data.role === "agent") {
         if (data.extraCredit > 0) {
@@ -171,10 +172,10 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             }
         }
-        var tableData = await baseController.Bfind(userModel, { pid: data.pid });
-        var userData = await baseController.BfindOne(userModel, { _id: data.pid });
-        res.json({ status: 200, data: { tableData: tableData, userData: userData } });
-        return true;
+        // var tableData = await baseController.Bfind(userModel, { pid: data.pid });
+        userData = await baseController.BfindOne(userModel, { _id: data.pid });
+        // res.json({ status: 200, data: { tableData: tableData, userData: userData } });
+        // return true;
     } else if (data.role === "user") {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.agentId })
@@ -223,13 +224,13 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false;
             }
         }
-        var tableData = await baseController.Bfind(userModel, { agentId: data.agentId });
-        var userData = await baseController.BfindOne(userModel, { _id: data.agentId });
-        res.json({ status: 200, data: { tableData: tableData, userData: userData } });
-        return true;
+        // var tableData = await baseController.Bfind(userModel, { agentId: data.agentId });
+        userData = await baseController.BfindOne(userModel, { _id: data.agentId });
+        // res.json({ status: 200, data: { tableData: tableData, userData: userData } });
+        // return true;
     }
     var rdata = await getUserData({ filter: data.filter })
-    res.json({ status: 200, data: rdata })
+    res.json({ status: 200, data: { ...rdata, userData } })
 }
 
 
