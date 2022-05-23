@@ -229,10 +229,6 @@ exports.updateBalanceManagement = async (req, res, next) => {
 }
 
 
-
-
-
-
 exports.updateUser = async (req, res, next) => {
     var data = req.body;
     var userData = await baseController.BfindOne(userModel, { _id: data.userId })
