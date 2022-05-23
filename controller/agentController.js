@@ -2,7 +2,8 @@ const TokenGenerator = require('uuid-token-generator');
 const baseController = require("./baseController");
 const { userModel } = require("../models/userModel");
 const { paymentHistoryModel } = require('../models/paymentHistoryModel');
-const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinEventModel, bwinFavoriteModel } = require("../models/bwinSportsModel");
+// bwinPrematchModel, bwinInPlayModel, bwinEventModel, bwinFavoriteModel
+const { bwinHistoryModel } = require("../models/bwinSportsModel");
 const tokgen = new TokenGenerator();
 
 // user data management part
