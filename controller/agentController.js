@@ -59,7 +59,7 @@ const getUserData = async (data) => {
                 total: winBets - loseBets + userData[i].balance,
                 totalNet: winBets - loseBets + userData[i].balance - discount,
                 agentCommiPer: agentCommiPer,
-                platformCommi: platformCommission,
+                platformCommi: platformCommission * userData[i].balance * 0.01,
                 agetnCommi: userData[i].balance * agentCommiPer * 0.01,
             })
         }
