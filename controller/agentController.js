@@ -1,6 +1,3 @@
-// const mongoose = require('mongoose');
-const { default: axios } = require("axios");
-const { uid } = require('uid');
 const TokenGenerator = require('uuid-token-generator');
 const baseController = require("./baseController");
 const { userModel } = require("../models/userModel");
