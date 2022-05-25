@@ -367,7 +367,7 @@ exports.agentInfoRg = async (req, res, next) => {
             var closeBets = 0;
             var loseBets = 0;
             for (var j in history) {
-                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } });
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week.value)) } });
                 if (betHistory.status === "pending") {
                     openBets = openBets + parseInt(betHistory.amount)
                 } else if (betHistory.status === "win") {
