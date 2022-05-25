@@ -381,12 +381,6 @@ exports.agentInfoRg = async (req, res, next) => {
                     turnover = turnover + parseInt(betHistory.amount)
                 }
             }
-
-            // var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } })
-            // var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
-            // var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
-            // var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
-
         }
     }
 
