@@ -357,28 +357,35 @@ exports.agentInfoLf = async (req, res, next) => {
 exports.agentInfoRg = async (req, res, next) => {
     var data = req.body;
     var turnover = 0
+    var winBets = 0;
     var userData = await baseController.Bfind(userModel, { agentId: data.agentId });
     if (userData.length) {
         for (var i in userData) {
-            var totalBalance = await bwinHistoryModel.aggregate([
-                {
-                    $match: {
-                        $and: [
-                            { userId: String(userData[i]._id) },
-                            { created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.week.value)) } }
-                        ]
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: "$amount" },
-                    }
+
+            var history = await bwinHistoryModel.distinct("betId", { userId: userData[i]._id });
+            var openBets = 0;
+            var closeBets = 0;
+            var loseBets = 0;
+            for (var j in history) {
+                var betHistory = await baseController.BfindOne(bwinHistoryModel, { userId: userData[i]._id, betId: history[j], created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } });
+                if (betHistory.status === "pending") {
+                    openBets = openBets + parseInt(betHistory.amount)
+                } else if (betHistory.status === "win") {
+                    winBets = winBets + parseInt(betHistory.winAmount)
+                    closeBets = closeBets + parseInt(betHistory.amount)
+                    turnover = turnover + parseInt(betHistory.amount)
+                } else if (betHistory.status === "lose") {
+                    loseBets = loseBets + parseInt(betHistory.amount)
+                    closeBets = closeBets + parseInt(betHistory.amount)
+                    turnover = turnover + parseInt(betHistory.amount)
                 }
-            ])
-            if (totalBalance.length) {
-                turnover = turnover + Number(totalBalance[0].total)
             }
+
+            // var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } })
+            // var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
+            // var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
+            // var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
+
         }
     }
 
@@ -394,7 +401,7 @@ exports.agentInfoRg = async (req, res, next) => {
         rdata.turnover.value = `${turnover} ${userData[0].currency}`
         rdata.totalDiscount.value = `${0} ${userData[0].currency}`
         rdata.agentProfits.value = `${0} %`
-        rdata.platformProfits.value = `${0} %`
+        rdata.platformProfits.value = `${turnover - winBets} %`
         rdata.platformDebt.value = `0 ${userData[0].currency}`
     }
     return res.json({ status: 200, data: rdata })
