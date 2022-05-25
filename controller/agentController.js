@@ -358,6 +358,7 @@ exports.agentInfoRg = async (req, res, next) => {
     var data = req.body;
     var turnover = 0
     var winBets = 0;
+    var agentData = await baseController.BfindOne(userModel, { _id: data.agentId });
     var userData = await baseController.Bfind(userModel, { agentId: data.agentId });
     if (userData.length) {
         for (var i in userData) {
@@ -397,12 +398,14 @@ exports.agentInfoRg = async (req, res, next) => {
         platformDebt: { value: 0, label: 'Platform Debt' },
     }
 
+
+    var platformDebt = turnover - winBets
     if (userData.length) {
         rdata.turnover.value = `${turnover} ${userData[0].currency}`
         rdata.totalDiscount.value = `${0} ${userData[0].currency}`
-        rdata.agentProfits.value = `${0} %`
-        rdata.platformProfits.value = `${turnover - winBets} %`
-        rdata.platformDebt.value = `0 ${userData[0].currency}`
+        rdata.agentProfits.value = `${agentData.agentShare} %`
+        rdata.platformProfits.value = `${100 - agentData.agentShare} %`
+        rdata.platformDebt.value = `${platformDebt < 0 ? platformDebt : 0} ${userData[0].currency}`
     }
     return res.json({ status: 200, data: rdata })
 }
