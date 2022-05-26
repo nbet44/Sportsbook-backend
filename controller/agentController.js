@@ -203,7 +203,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false
             }
             // }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentShare: data.agentShare, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -226,7 +226,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false
             }
             // }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentCommission: data.agentCommission, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, agentShare: data.agentShare, sportsDiscount: data.sportsDiscount, casinoDiscount: data.casinoDiscount });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -356,20 +356,20 @@ exports.agentInfoLf = async (req, res, next) => {
         casinoCommission: { value: 0, label: 'Casino Commission' },
         sportsDiscount: { value: 0, label: 'Sports Discount' },
         backupCredit: { value: 0, label: 'Backup Credit' },
-        userBackupCredit: { value: 0, label: 'User Backup Credit' },
+        userBackupCredit: { value: 0, label: 'Used Backup Credit' },
     }
     if (userData.length) {
         rdata.currentBalance.value = `${userData[0].balance}  ${userData[0].currency}`
-        rdata.sportsCommission.value = `${0} %`
-        rdata.casinoCommission.value = `${0} %`
+        rdata.sportsCommission.value = `${userData[0].sportsCommission} %`
+        rdata.casinoCommission.value = `${userData[0].casinoCommission} %`
         rdata.sportsDiscount.value = `${0} ${userData[0].currency}`
         rdata.backupCredit.value = `${0} ${userData[0].currency}`
-        rdata.userBackupCredit.value = `${0} ${userData[0].currency}`
     }
 
     if (minusBalance.length) {
         rdata.totalBalance = { value: `${userData[0].balance + minusBalance[0].total}  ${userData[0].currency}`, label: 'Total Balance' }
         rdata.balanceSpend = { value: `${minusBalance[0].total}  ${userData[0].currency}`, label: 'Balance Spend' }
+        rdata.userBackupCredit.value = `${minusBalance[0].total}  ${userData[0].currency}`
     }
 
     return res.json({ status: 200, data: rdata })
