@@ -140,13 +140,36 @@ exports.updateBalanceManagement = async (req, res, next) => {
     delete data._id
     if (data.role === "agent" || data.role === "superAgent") {
         if (data.extraCredit > 0) {
-            var parent = await baseController.BfindOne(userModel, { _id: data.pid })
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel,
+                { _id: data.pid },
+                {
+                    $inc: {
+                        balance: (Math.abs(parseInt(data.extraCredit)) * -1),
+                        extraCredit: (Math.abs(parseInt(data.extraCredit)) * -1)
+                    },
+                    withdrawalCredit: data.withdrawalCredit,
+                    autoWeeklyCredit: data.autoWeeklyCredit,
+                    weeklyCreditResetState: data.weeklyCreditResetState,
+                    weeklyCreditResetDay: data.weeklyCreditResetDay
+                }
+            );
             if (!isCheck) {
                 res.json({ status: 300, data: "Something wrong from parent agent" })
                 return false
             }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel,
+                { _id: data.userId },
+                {
+                    $inc: {
+                        balance: (Math.abs(parseInt(data.extraCredit)) * 1),
+                        extraCredit: (Math.abs(parseInt(data.extraCredit)) * 1)
+                    },
+                    withdrawalCredit: data.withdrawalCredit,
+                    autoWeeklyCredit: data.autoWeeklyCredit,
+                    weeklyCreditResetState: data.weeklyCreditResetState,
+                    weeklyCreditResetDay: data.weeklyCreditResetDay
+                }
+            );
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -161,14 +184,11 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false;
             }
         } else {
-            var parent = await baseController.BfindOne(userModel, { _id: data.pid })
-            // if (parent.pid !== "0") {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.pid }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Something wrong from parent agent" })
                 return false
             }
-            // }
             var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
@@ -185,11 +205,11 @@ exports.updateBalanceManagement = async (req, res, next) => {
             }
         }
 
-        if (data.platformCommission || data.platformCommission == 0 || data.sportsCommission || data.sportsCommission == 0 || data.casinoCommission || data.casinoCommission == 0) {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
+        if (data.sportsCommission || data.sportsCommission == 0 || data.casinoCommission || data.casinoCommission == 0 || data.agentShare || data.agentShare == 0) {
+            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { agentShare: data.agentShare, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             var users = await baseController.Bfind(userModel, { agentId: data.userId })
             for (let i in users) {
-                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { platformCommission: data.platformCommission, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
+                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { agentShare: data.agentShare, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
             }
         }
         userData = await baseController.BfindOne(userModel, { _id: data.pid });
@@ -355,6 +375,7 @@ exports.agentInfoLf = async (req, res, next) => {
         sportsCommission: { value: 0, label: 'Sports Commission' },
         casinoCommission: { value: 0, label: 'Casino Commission' },
         sportsDiscount: { value: 0, label: 'Sports Discount' },
+        casinoDiscount: { value: 0, label: 'Casino Discount' },
         backupCredit: { value: 0, label: 'Backup Credit' },
         userBackupCredit: { value: 0, label: 'Used Backup Credit' },
     }
@@ -363,12 +384,13 @@ exports.agentInfoLf = async (req, res, next) => {
         rdata.sportsCommission.value = `${userData[0].sportsCommission} %`
         rdata.casinoCommission.value = `${userData[0].casinoCommission} %`
         rdata.sportsDiscount.value = `${0} ${userData[0].currency}`
+        rdata.casinoDiscount.value = `${0} ${userData[0].currency}`
         rdata.backupCredit.value = `${0} ${userData[0].currency}`
     }
 
     if (minusBalance.length) {
-        rdata.totalBalance = { value: `${userData[0].balance + minusBalance[0].total}  ${userData[0].currency}`, label: 'Total Balance' }
-        rdata.balanceSpend = { value: `${minusBalance[0].total}  ${userData[0].currency}`, label: 'Balance Spend' }
+        rdata.totalBalance.value = `${userData[0].balance + minusBalance[0].total}  ${userData[0].currency}`
+        rdata.balanceSpend.value = `${minusBalance[0].total}  ${userData[0].currency}`
         rdata.userBackupCredit.value = `${minusBalance[0].total}  ${userData[0].currency}`
     }
 
