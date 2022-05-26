@@ -138,7 +138,7 @@ exports.updateBalanceManagement = async (req, res, next) => {
     var data = req.body;
     var userData
     delete data._id
-    if (data.role === "agent") {
+    if (data.role === "agent" || data.role === "superAgent") {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.pid })
             var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
