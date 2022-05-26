@@ -14,7 +14,7 @@ const getUserData = async (data) => {
     if (data.filter.role === 'agent') {
         agentData = await baseController.Bfind(userModel, { role: 'agent', _id: data.filter.agentId });
     } else {
-        agentData = await baseController.Bfind(userModel, { role: 'agent' });
+        agentData = await baseController.Bfind(userModel, { $or: [{ role: 'agent' }, { role: 'superAgent' }] });
     }
     for (var h in agentData) {
         agent.push(agentData[h])
@@ -42,10 +42,31 @@ const getUserData = async (data) => {
                 }
             }
 
-            var credit = await baseController.Bfind(paymentHistoryModel, { userId: userData[i]._id, created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) } })
+            var credit = await paymentHistoryModel.aggregate([
+                {
+                    $match: {
+                        $and: [
+                            {
+                                userId: String(userData[i]._id)
+                            },
+                            {
+                                created: { $gte: new Date(Date.now() - 3600 * 1000 * 24 * 7 * parseInt(data.filter.week.value)) }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        amount: {
+                            $sum: '$amount'
+                        }
+                    }
+                }
+            ])
             var discount = userData[i].extraCredit ? userData[i].extraCredit : 0
-            var agentCommiPer = userData[i].agentCommission ? userData[i].agentCommission : 0
-            var platformCommission = userData[i].platformCommission ? userData[i].platformCommission : 0
+            var agentCommiPer = userData[i].agentShare ? userData[i].agentShare : 0
+            var platformCommission = 100 - Number(agentCommiPer)
             result.push({
                 ...userData[i]._doc,
                 credit: credit.length ? credit[0].amount : 0,
@@ -54,11 +75,11 @@ const getUserData = async (data) => {
                 closeBets: closeBets,
                 turnover: winBets - loseBets,
                 discount: discount,
-                total: winBets - loseBets + userData[i].balance,
-                totalNet: winBets - loseBets + userData[i].balance - discount,
+                total: closeBets - winBets + discount,
+                totalNet: closeBets - winBets,
                 agentCommiPer: agentCommiPer,
-                platformCommi: platformCommission * userData[i].balance * 0.01,
-                agetnCommi: userData[i].balance * agentCommiPer * 0.01,
+                platformCommi: (closeBets - winBets) * platformCommission * 0.01,
+                agetnCommi: (closeBets - winBets) * agentCommiPer * 0.01,
             })
         }
         user[agentData[h]._id] = result
@@ -534,8 +555,9 @@ exports.removeAgentAction = async (req, res, next) => {
 
 exports.updateBalance = async (req, res, next) => {
     var data = req.body;
+    console.log(data)
     delete data._id
-    if (data.role === "agent") {
+    if (data.role === "agent" || data.role === "superAgent") {
         if (data.extraCredit > 0) {
             var parent = await baseController.BfindOne(userModel, { _id: data.pid })
             var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: parent._id }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
