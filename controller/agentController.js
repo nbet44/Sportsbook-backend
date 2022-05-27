@@ -14,7 +14,7 @@ const getUserData = async (data) => {
     if (data.filter.role === 'agent') {
         agentData = await baseController.Bfind(userModel, { role: 'agent', _id: data.filter.agentId });
     } else {
-        agentData = await baseController.Bfind(userModel, { $or: [{ role: 'agent' }, { role: 'superAgent' }] });
+        agentData = await userModel.find({ $or: [{ role: 'agent' }, { role: 'superAgent' }] }, {}, { sort: { role: -1 } });
     }
     for (var h in agentData) {
         agent.push(agentData[h])
@@ -235,6 +235,8 @@ exports.updateBalanceManagement = async (req, res, next) => {
         if (data.agentShare || data.agentShare == 0) update.agentShare = data.agentShare
         if (data.sportsCommission || data.sportsCommission == 0) update.sportsCommission = data.sportsCommission
         if (data.casinoCommission || data.casinoCommission == 0) update.casinoCommission = data.casinoCommission
+        if (data.sportsDiscount || data.sportsDiscount == 0) update.sportsDiscount = data.sportsDiscount
+        if (data.casinoDiscount || data.casinoDiscount == 0) update.casinoDiscount = data.casinoDiscount
         var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, update)
         var users = await baseController.Bfind(userModel, { agentId: data.userId })
         for (let i in users) {
@@ -397,22 +399,23 @@ exports.agentInfoLf = async (req, res, next) => {
         }
     ])
     var rdata = {
-        totalBalance: { value: 0, label: 'Total Balance' },
-        balanceSpend: { value: 0, label: 'Balance Spend' },
-        currentBalance: { value: 0, label: 'Current Balance' },
-        sportsCommission: { value: 0, label: 'Sports Commission' },
-        casinoCommission: { value: 0, label: 'Casino Commission' },
-        sportsDiscount: { value: 0, label: 'Sports Discount' },
-        casinoDiscount: { value: 0, label: 'Casino Discount' },
-        backupCredit: { value: 0, label: 'Backup Credit' },
-        userBackupCredit: { value: 0, label: 'Used Backup Credit' },
+        totalBalance: { value: `0 TRY`, label: 'Total Balance' },
+        balanceSpend: { value: `0 TRY`, label: 'Balance Spend' },
+        currentBalance: { value: `0 TRY`, label: 'Current Balance' },
+        sportsCommission: { value: `0%`, label: 'Sports Commission' },
+        casinoCommission: { value: `0%`, label: 'Casino Commission' },
+        sportsDiscount: { value: `0%`, label: 'Sports Discount' },
+        casinoDiscount: { value: `0%`, label: 'Casino Discount' },
+        backupCredit: { value: `0 TRY`, label: 'Backup Credit' },
+        userBackupCredit: { value: `0 TRY`, label: 'Used Backup Credit' },
     }
     if (userData.length) {
+        rdata.totalBalance.value = `${userData[0].balance}  ${userData[0].currency}`
         rdata.currentBalance.value = `${userData[0].balance}  ${userData[0].currency}`
         rdata.sportsCommission.value = `${userData[0].sportsCommission} %`
         rdata.casinoCommission.value = `${userData[0].casinoCommission} %`
-        rdata.sportsDiscount.value = `${0} %`
-        rdata.casinoDiscount.value = `${0} %`
+        rdata.sportsDiscount.value = `${userData[0].sportsDiscount} %`
+        rdata.casinoDiscount.value = `${userData[0].casinoDiscount} %`
         rdata.backupCredit.value = `${0} ${userData[0].currency}`
     }
 
@@ -456,20 +459,21 @@ exports.agentInfoRg = async (req, res, next) => {
     }
 
     var rdata = {
-        turnover: { value: 0, label: 'Turnover' },
-        totalDiscount: { value: 0, label: 'Total Discount' },
-        agentProfits: { value: 0, label: 'Agent Profits' },
-        platformProfits: { value: 0, label: 'Platform profits' },
-        platformDebt: { value: 0, label: 'Platform Debt' },
+        turnover: { value: `0 TRY`, label: 'Turnover' },
+        totalDiscount: { value: `0 TRY`, label: 'Total Discount' },
+        agentProfits: { value: `0%`, label: 'Agent Profits' },
+        platformProfits: { value: `100%`, label: 'Platform profits' },
+        platformDebt: { value: `0 TRY`, label: 'Platform Debt' },
     }
 
 
     var platformDebt = turnover - winBets
+    rdata.agentProfits.value = `${agentData.agentShare} %`
+    rdata.platformProfits.value = `${100 - agentData.agentShare} %`
+
     if (userData.length) {
         rdata.turnover.value = `${turnover} ${userData[0].currency}`
         rdata.totalDiscount.value = `${0} ${userData[0].currency}`
-        rdata.agentProfits.value = `${agentData.agentShare} %`
-        rdata.platformProfits.value = `${100 - agentData.agentShare} %`
         rdata.platformDebt.value = `${platformDebt < 0 ? platformDebt : 0} ${userData[0].currency}`
     }
     return res.json({ status: 200, data: rdata })
