@@ -184,12 +184,37 @@ exports.updateBalanceManagement = async (req, res, next) => {
                 return false;
             }
         } else {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.pid }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * 1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * 1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+            var isCheck = await baseController.BfindOneAndUpdate(userModel,
+                { _id: data.pid },
+                {
+                    $inc: {
+                        balance: (Math.abs(parseInt(data.extraCredit)) * 1),
+                        extraCredit: (Math.abs(parseInt(data.extraCredit)) * 1)
+                    },
+                    withdrawalCredit: data.withdrawalCredit,
+                    autoWeeklyCredit: data.autoWeeklyCredit,
+                    weeklyCreditResetState: data.weeklyCreditResetState,
+                    weeklyCreditResetDay: data.weeklyCreditResetDay
+                }
+            );
             if (!isCheck) {
                 res.json({ status: 300, data: "Something wrong from parent agent" })
                 return false
             }
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { $inc: { 'balance': (Math.abs(parseInt(data.extraCredit)) * -1), 'extraCredit': (Math.abs(parseInt(data.extraCredit)) * -1) }, withdrawalCredit: data.withdrawalCredit, autoWeeklyCredit: data.autoWeeklyCredit, weeklyCreditResetState: data.weeklyCreditResetState, weeklyCreditResetDay: data.weeklyCreditResetDay });
+
+            var isCheck = await baseController.BfindOneAndUpdate(userModel,
+                { _id: data.userId },
+                {
+                    $inc: {
+                        balance: (Math.abs(parseInt(data.extraCredit)) * -1),
+                        extraCredit: (Math.abs(parseInt(data.extraCredit)) * -1)
+                    },
+                    withdrawalCredit: data.withdrawalCredit,
+                    autoWeeklyCredit: data.autoWeeklyCredit,
+                    weeklyCreditResetState: data.weeklyCreditResetState,
+                    weeklyCreditResetDay: data.weeklyCreditResetDay
+                }
+            );
             if (!isCheck) {
                 res.json({ status: 300, data: "Wrong something from adding the user balance" });
                 return false;
@@ -205,12 +230,15 @@ exports.updateBalanceManagement = async (req, res, next) => {
             }
         }
 
-        if (data.sportsCommission || data.sportsCommission == 0 || data.casinoCommission || data.casinoCommission == 0 || data.agentShare || data.agentShare == 0) {
-            var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { agentShare: data.agentShare, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
-            var users = await baseController.Bfind(userModel, { agentId: data.userId })
-            for (let i in users) {
-                await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, { agentShare: data.agentShare, sportsCommission: data.sportsCommission, casinoCommission: data.casinoCommission })
-            }
+        var update = {}
+
+        if (data.agentShare || data.agentShare == 0) update.agentShare = data.agentShare
+        if (data.sportsCommission || data.sportsCommission == 0) update.sportsCommission = data.sportsCommission
+        if (data.casinoCommission || data.casinoCommission == 0) update.casinoCommission = data.casinoCommission
+        var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, update)
+        var users = await baseController.Bfind(userModel, { agentId: data.userId })
+        for (let i in users) {
+            await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, update)
         }
         userData = await baseController.BfindOne(userModel, { _id: data.pid });
     } else if (data.role === "user") {
@@ -383,8 +411,8 @@ exports.agentInfoLf = async (req, res, next) => {
         rdata.currentBalance.value = `${userData[0].balance}  ${userData[0].currency}`
         rdata.sportsCommission.value = `${userData[0].sportsCommission} %`
         rdata.casinoCommission.value = `${userData[0].casinoCommission} %`
-        rdata.sportsDiscount.value = `${0} ${userData[0].currency}`
-        rdata.casinoDiscount.value = `${0} ${userData[0].currency}`
+        rdata.sportsDiscount.value = `${0} %`
+        rdata.casinoDiscount.value = `${0} %`
         rdata.backupCredit.value = `${0} ${userData[0].currency}`
     }
 
