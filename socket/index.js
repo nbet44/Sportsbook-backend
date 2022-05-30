@@ -427,7 +427,7 @@ module.exports = async (io) => {
         };
 
         var response = await axios(request);
-        console.log(response)
+        console.log(response.data)
         if (response.data.status === true) {
             var data = response.data.data;
             for (var i in data) {
