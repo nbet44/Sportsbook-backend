@@ -108,7 +108,7 @@ exports.updateUserManagement = async (req, res, next) => {
             return res.json({ status: 300, data: "pending bets" })
         }
     } else {
-        await userModel.findOneAndUpdate({ _id: data.update._id, isOnline: { $ne: 'ON' } }, { isOnline: 'OFF' }, { new: true, upsert: true, })
+        await userModel.findOneAndUpdate({ _id: data.update._id, isOnline: { $ne: 'ON' } }, { isOnline: 'OFF' })
     }
     var update = {
         level: data.level,
