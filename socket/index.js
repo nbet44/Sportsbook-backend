@@ -459,15 +459,15 @@ module.exports = async (io) => {
         var roomName = query.roomName;
         if (roomName && roomName != 'null') {
             onlineUsers[socket.id] = roomName;
-            await userModel.findOneAndUpdate({ _id: roomName, isOnline: { $ne: 'BLOCK' } }, { isOnline: 'ON' }, { upsert: true, })
+            var user = await userModel.findOneAndUpdate({ _id: roomName, isOnline: { $ne: 'BLOCK' } }, { isOnline: 'ON' }, { upsert: true, })
             socket.join(roomName);
-            console.log(roomName + ' ON');
+            console.log(user.userId + ' ON');
         }
 
         socket.on('disconnect', async function () {
             if (onlineUsers[socket.id]) {
-                await userModel.findOneAndUpdate({ _id: onlineUsers[socket.id] }, { isOnline: 'OFF' }, { upsert: true, });
-                console.log(onlineUsers[socket.id] + " OFF")
+                var user = await userModel.findOneAndUpdate({ _id: onlineUsers[socket.id] }, { isOnline: 'OFF' }, { upsert: true, });
+                console.log(user.userId + " OFF")
             }
             delete onlineUsers[socket.id];
         });
