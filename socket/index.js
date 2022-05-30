@@ -443,7 +443,7 @@ module.exports = async (io) => {
                     }
                 }
             } catch (error) {
-                console.log('get game list error')
+                console.log(error)
             }
             await removeOldMatchs()
         }, 1000 * 5);
@@ -453,7 +453,7 @@ module.exports = async (io) => {
             await getRealtimePreData()
             await getLiveDataMatch()
             await removeOldMatchs()
-        }, 1000 * 60 * 30);
+        }, 1000 * 60 * 0.5);
     }
 
     io.on("connection", async (socket) => {
