@@ -15,7 +15,7 @@ const userModel = () => {
         access_token: { type: String },
         sessionId: { type: String },
         status: { type: String },
-        isOnline: { type: String, default: 'Offline' },
+        isOnline: { type: String, default: 'OFF' },
         permission: { type: Object },
         role: { type: String, default: "user" },
         pid: { type: String },
