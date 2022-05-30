@@ -382,79 +382,79 @@ module.exports = async (io) => {
         // });
     }
 
-    async function getdata() {
-        setTimeout(async function () {
-            var monthArray = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
-            var currentDate = new Date();
+    // async function getdata() {
+    setTimeout(async function () {
+        var monthArray = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
+        var currentDate = new Date();
 
-            await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate())))
-            await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 1)))
-            await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 2)))
-            await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 3)))
-            await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 4)))
-            await getLiveDataMatch()
-            // await makeWeeklyCredit()
+        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate())))
+        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 1)))
+        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 2)))
+        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 3)))
+        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 4)))
+        await getLiveDataMatch()
+        // await makeWeeklyCredit()
 
-            var userData = await baseController.BfindOne(userModel, { userId: "admin" });
-            if (!userData) {
-                var isCheck = await baseController.data_save({
-                    username: "admin",
-                    password: "12345678",
-                    userId: "admin",
-                    currency: "TRY",
-                    role: "admin",
-                    pid: "0",
-                    balance: 1000,
-                    permission: {
-                        agent: true,
-                        player: true
-                    }
-                }, userModel);
-                console.log(isCheck)
-            }
+        var userData = await baseController.BfindOne(userModel, { userId: "admin" });
+        if (!userData) {
+            var isCheck = await baseController.data_save({
+                username: "admin",
+                password: "12345678",
+                userId: "admin",
+                currency: "TRY",
+                role: "admin",
+                pid: "0",
+                balance: 1000,
+                permission: {
+                    agent: true,
+                    player: true
+                }
+            }, userModel);
+            console.log(isCheck)
+        }
 
-            var data = new FormData();
-            data.append('siteId', XG_siteId);
-            data.append('publicKey', XG_publicKey);
+        var data = new FormData();
+        data.append('siteId', XG_siteId);
+        data.append('publicKey', XG_publicKey);
 
-            try {
-                var request = {
-                    method: 'post',
-                    url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
-                    headers: {
-                        ...data.getHeaders()
-                    },
-                    data: data
-                };
+        try {
+            var request = {
+                method: 'post',
+                url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
+                headers: {
+                    ...data.getHeaders()
+                },
+                data: data
+            };
 
-                var response = await axios(request);
-                if (response.data.status === true) {
-                    var data = response.data.data;
-                    for (var i in data) {
-                        var saveData = data[i];
-                        var isCheck = await baseController.BfindOneAndUpdate(
-                            xpressGameModel,
-                            { gameId: saveData.gameId },
-                            saveData
-                        );
-                        if (!isCheck) {
-                            console.log("---" + saveData.Id + "---");
-                        }
+            var response = await axios(request);
+            if (response.data.status === true) {
+                var data = response.data.data;
+                for (var i in data) {
+                    var saveData = data[i];
+                    var isCheck = await baseController.BfindOneAndUpdate(
+                        xpressGameModel,
+                        { gameId: saveData.gameId },
+                        saveData
+                    );
+                    if (!isCheck) {
+                        console.log("---" + saveData.Id + "---");
                     }
                 }
-            } catch (error) {
-                console.log('get game list error')
             }
-            await removeOldMatchs()
-        }, 1000 * 5);
+        } catch (error) {
+            console.log('get game list error')
+        }
+        await removeOldMatchs()
+    }, 1000 * 5);
 
-        setInterval(async function () {
-            console.log("refresh");
-            await getRealtimePreData()
-            await getLiveDataMatch()
-            await removeOldMatchs()
-        }, 1000 * 60 * 30);
-    }
+    setInterval(async function () {
+        console.log("refresh");
+        await getRealtimePreData()
+        await getLiveDataMatch()
+        await removeOldMatchs()
+    }, 1000 * 60 * 0);
+    // }
 
     io.on("connection", async (socket) => {
         var query = socket.handshake.query;
@@ -463,13 +463,13 @@ module.exports = async (io) => {
             onlineUsers[socket.id] = roomName;
             await userModel.findOneAndUpdate({ _id: roomName, isOnline: { $ne: 'BLOCK' } }, { isOnline: 'ON' }, { upsert: true, })
             socket.join(roomName);
-            console.log(roomName + ' online');
+            console.log(roomName + ' ON');
         }
 
         socket.on('disconnect', async function () {
             if (onlineUsers[socket.id]) {
                 await userModel.findOneAndUpdate({ _id: onlineUsers[socket.id] }, { isOnline: 'OFF' }, { upsert: true, });
-                console.log(onlineUsers[socket.id] + " Offline")
+                console.log(onlineUsers[socket.id] + " OFF")
             }
             delete onlineUsers[socket.id];
         });

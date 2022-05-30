@@ -95,6 +95,7 @@ exports.getUserManagement = async (req, res, next) => {
 
 exports.updateUserManagement = async (req, res, next) => {
     var data = req.body;
+
     var userData = await baseController.BfindOne(userModel, { _id: data.update._id })
     if (!userData) {
         return res.json({ status: 300, data: "Invalid User" });
@@ -102,7 +103,7 @@ exports.updateUserManagement = async (req, res, next) => {
     if (data.delete) {
         var betData = await baseController.Bfind(bwinHistoryModel, { userId: data.update._id, status: "pending" })
         if (betData.length === 0) {
-            await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, { isOnline: 'Blocked' })
+            await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, { isOnline: 'BLOCK' })
         } else {
             return res.json({ status: 300, data: "pending bets" })
         }
@@ -123,10 +124,30 @@ exports.updateUserManagement = async (req, res, next) => {
 
     if (data.update.username) update['username'] = data.update.username
     if (data.update.password) update['password'] = data.update.password
+
     var updatedUser = await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, update)
     if (!updatedUser) {
         return res.json({ status: 300, data: "failed update" })
     }
+
+    var updateAgent = {}
+
+    if (data.agentShare || data.agentShare == 0) updateAgent.agentShare = Number(data.agentShare)
+    if (data.update.sportsCommission || data.update.sportsCommission == 0) updateAgent.sportsCommission = Number(data.update.sportsCommission)
+    if (data.update.casinoCommission || data.update.casinoCommission == 0) updateAgent.casinoCommission = Number(data.update.casinoCommission)
+    if (data.update.sportsDiscount || data.update.sportsDiscount == 0) updateAgent.sportsDiscount = Number(data.update.sportsDiscount)
+    if (data.update.casinoDiscount || data.update.casinoDiscount == 0) updateAgent.casinoDiscount = Number(data.update.casinoDiscount)
+
+    console.log(updateAgent)
+    var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id }, updateAgent)
+
+    if (data.update.role === 'agent' || data.update.role === 'superAgent') {
+        var users = await baseController.Bfind(userModel, { agentId: data.update._id })
+        for (let i in users) {
+            await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, updateAgent)
+        }
+    }
+
     var pdata = {
         filter: data.filter
     }
@@ -230,18 +251,6 @@ exports.updateBalanceManagement = async (req, res, next) => {
             }
         }
 
-        var update = {}
-
-        if (data.agentShare || data.agentShare == 0) update.agentShare = data.agentShare
-        if (data.sportsCommission || data.sportsCommission == 0) update.sportsCommission = data.sportsCommission
-        if (data.casinoCommission || data.casinoCommission == 0) update.casinoCommission = data.casinoCommission
-        if (data.sportsDiscount || data.sportsDiscount == 0) update.sportsDiscount = data.sportsDiscount
-        if (data.casinoDiscount || data.casinoDiscount == 0) update.casinoDiscount = data.casinoDiscount
-        var isCheck = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, update)
-        var users = await baseController.Bfind(userModel, { agentId: data.userId })
-        for (let i in users) {
-            await baseController.BfindOneAndUpdate(userModel, { _id: users[i]._id }, update)
-        }
         userData = await baseController.BfindOne(userModel, { _id: data.pid });
     } else if (data.role === "user") {
         if (data.extraCredit > 0) {
