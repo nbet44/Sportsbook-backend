@@ -20,7 +20,7 @@ const getUserData = async (data) => {
         agent.push(agentData[h])
 
         var condition = { role: 'user', agentId: agentData[h]._id }
-        if (data.filter.status) condition['isOnline'] = 'Online'
+        if (data.filter.status) condition['isOnline'] = 'ON'
         var userData = await baseController.Bfind(userModel, condition);
         var result = [];
         for (var i in userData) {
@@ -107,7 +107,7 @@ exports.updateUserManagement = async (req, res, next) => {
             return res.json({ status: 300, data: "pending bets" })
         }
     } else {
-        await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id, isOnline: { $ne: 'Online' } }, { isOnline: 'Offline' })
+        await baseController.BfindOneAndUpdate(userModel, { _id: data.update._id, isOnline: { $ne: 'ON' } }, { isOnline: 'OFF' })
     }
     var update = {
         level: data.level,
@@ -307,12 +307,12 @@ exports.updateUser = async (req, res, next) => {
     if (data.delete) {
         var betData = await baseController.Bfind(bwinHistoryModel, { userId: data.userId, status: "pending" })
         if (betData.length === 0) {
-            await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Blocked' })
+            await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'BLOCK' })
         } else {
             return res.json({ status: 300, data: "pending bets" })
         }
     } else {
-        await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'Offline' })
+        await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { isOnline: 'OFF' })
     }
     var updatedUser = await baseController.BfindOneAndUpdate(userModel, { _id: data.userId }, { username: data.username, password: data.password, level: data.level, maxBetLimit: data.maxBetLimit, setting: { showRule: data.showRule } })
     if (!updatedUser) {
@@ -332,7 +332,7 @@ exports.userManageAgent = async (req, res, next) => {
         agent.push(agentData[h])
 
         var condition = { role: 'user', agentId: agentData[h]._id }
-        if (data.filter.status) condition['isOnline'] = 'Online'
+        if (data.filter.status) condition['isOnline'] = 'ON'
         var userData = await baseController.Bfind(userModel, condition);
         var result = [];
         for (var i in userData) {
