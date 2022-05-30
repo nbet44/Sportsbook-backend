@@ -417,31 +417,30 @@ module.exports = async (io) => {
         data.append('publicKey', XG_publicKey);
 
         // try {
-        var request = {
-            method: 'post',
-            url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
-            headers: {
-                ...data.getHeaders()
-            },
-            data: data
-        };
+        // var request = {
+        //     method: 'post',
+        //     url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
+        //     headers: {
+        //         ...data.getHeaders()
+        //     },
+        //     data: data
+        // };
 
-        var response = await axios(request);
-        console.log(response.data)
-        if (response.data.status === true) {
-            var data = response.data.data;
-            for (var i in data) {
-                var saveData = data[i];
-                var isCheck = await baseController.BfindOneAndUpdate(
-                    xpressGameModel,
-                    { gameId: saveData.gameId },
-                    saveData
-                );
-                if (!isCheck) {
-                    console.log("---" + saveData.Id + "---");
-                }
-            }
-        }
+        // var response = await axios(request);
+        // if (response.data.status === true) {
+        //     var data = response.data.data;
+        //     for (var i in data) {
+        //         var saveData = data[i];
+        //         var isCheck = await baseController.BfindOneAndUpdate(
+        //             xpressGameModel,
+        //             { gameId: saveData.gameId },
+        //             saveData
+        //         );
+        //         if (!isCheck) {
+        //             console.log("---" + saveData.Id + "---");
+        //         }
+        //     }
+        // }
         // } catch (error) {
         //     console.log(error)
         // }
