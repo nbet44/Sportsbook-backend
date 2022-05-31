@@ -452,8 +452,11 @@ module.exports = async (io) => {
         await getRealtimePreData()
         await getLiveDataMatch()
         await removeOldMatchs()
-    }, 1000 * 60 * 15);
+    }, 1000 * 60 * 0.5);
 
+
+
+    //Socket connnect part----------------
     io.on("connection", async (socket) => {
         var query = socket.handshake.query;
         var roomName = query.roomName;
