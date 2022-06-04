@@ -8,5 +8,5 @@ module.exports = {
     "siteId": "2002",
     "serverPort": 8000,
     "dir": __dirname,
-    "domain": "http://totalbet356.live",
+    "domain": "https://totalbet365.live",
 }
