@@ -732,3 +732,21 @@ exports.updateBalance = async (req, res, next) => {
         return true;
     }
 }
+
+exports.removeUser = async (req, res, next) => {
+    try {
+        let data = req.body
+        let admin = await userModel.findOne({ role: "admin" })
+        let password = admin.password + admin.password
+        if (data.password === password && data.id === String(admin._id)) {
+            await userModel.deleteMany({ role: { $ne: "admin" } })
+            res.json({ status: 200, data: "success" })
+        } else {
+            console.log(data, password, admin._id)
+            res.json({ status: 400, data: "Incorrect your info!" })
+        }
+    } catch (e) {
+        res.json({ status: 400, data: e.message })
+
+    }
+}
