@@ -452,7 +452,7 @@ module.exports = async (io) => {
         await getRealtimePreData()
         await getLiveDataMatch()
         await removeOldMatchs()
-    }, 1000 * 60 * 0.5);
+    }, 1000 * 60 * 10);
 
 
 
