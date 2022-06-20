@@ -1,5 +1,6 @@
 const { default: axios } = require("axios");
 var FormData = require('form-data');
+const { sbobetPrematchModel } = require("../models/sbobetModel");
 const { bet356PrematchModel } = require("../models/bet365Model");
 const baseController = require("../controller/baseController");
 const { token } = require("../config/index");
@@ -77,10 +78,81 @@ module.exports = async () => {
     }
     //BET365 end
 
+    //SBOBET start
+    const prematchOddSbobet = async (param) => {
+        request = {
+            method: "get",
+            url: "https://api.b365api.com/v1/sbobet/event?token=" + token + "&event_id=" + param.id,
+        };
+        try {
+            response = await axios(request);
+            // console.log(response.data)
+
+            if (response.data.success == 1 && response.data.results.length) {
+                let data = response.data.results[0]
+                let sdata = {
+                    Id: data.id,
+                    OurId: param.our_event_id,
+                    SportId: 1,
+                    SportName: "Soccer",
+                    HomeTeam: param.home.name,
+                    AwayTeam: param.away.name,
+                    IsPreMatch: true,
+                    markets: data.markets,
+                    updated_at: data.updated_at
+                }
+                await baseController.BfindOneAndUpdate(sbobetPrematchModel, { Id: sdata.Id }, sdata)
+            }
+        } catch (e) {
+            console.log('Getting SBOBET pre-event odds', e.message)
+        }
+    }
+
+    const prematchSbobet = async (page = 1) => {
+        request = {
+            method: "get",
+            url: "https://api.b365api.com/v1/sbobet/upcoming?sport_id=1&page=" + page + "&token=" + token,
+        };
+        try {
+            response = await axios(request);
+            if (response.data.success === 1) {
+                let funcs = []
+                for (let i in response.data.results) {
+                    funcs.push(prematchOddSbobet(response.data.results[i]))
+                }
+                Promise.all(funcs)
+            }
+        } catch (e) {
+            console.log('Getting SBOBET pre-event', e.message)
+        }
+    }
+
+    const getPreSbobet = async () => {
+        request = {
+            method: "get",
+            url: "https://api.b365api.com/v1/sbobet/upcoming?sport_id=1&token=" + token,
+        };
+        try {
+            response = await axios(request);
+            if (response.data.success === 1) {
+                let data = response.data
+                let total = Math.ceil(data.pager.total / data.pager.per_page)
+                for (let i = 1; i <= total; i++) {
+                    await prematchSbobet([i])
+                }
+            }
+        } catch (e) {
+            console.log('Start getting prematch SBOBET', e.message)
+        }
+    }
+    //SBOBET end
 
 
 
-    getPreBET365()
+    // await getPreBET365()
+    await getPreSbobet()
+
+
     // setInterval(async function () {
     //     console.log("refesh")
     // }, 1000 * 20)
