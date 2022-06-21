@@ -18,8 +18,7 @@ const AdminRouter = require('./router/AdminRoute');
 const ApiRouter = require('./router/ApiRoute');
 
 
-//mongoose.connect(config.DBCONNECT, { useNewUrlParser: true, useFindAndModify: false, useUnifiedTopology: true, useCreateIndex: true }).then(() => {
-mongoose.connect(config.TESTDB, { useNewUrlParser: true, useFindAndModify: false, useUnifiedTopology: true, useCreateIndex: true }).then(() => {
+mongoose.connect(config.db.bet777, { useNewUrlParser: true, useFindAndModify: false, useUnifiedTopology: true, useCreateIndex: true }).then(() => {
   console.log('Database is connected');
 
   app.use(cors);
@@ -40,7 +39,6 @@ mongoose.connect(config.TESTDB, { useNewUrlParser: true, useFindAndModify: false
   SocketServer(io);
   global.io = io;
 
-  // app.get('/admin', (req, res) => { res.sendFile(path.join(__dirname, 'client/admin/index.html')); });
   app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'build/index.html')); });
 
   server.listen(config.serverPort, () => {

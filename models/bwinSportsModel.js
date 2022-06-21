@@ -15,6 +15,7 @@ const bwinPrematchModel = () => {
         BetRadarId: { type: Number },
         IsPreMatch: { type: Boolean },
         IsOutright: { type: Boolean },
+        our_event_id: { type: String },
         Markets: { type: Object },
         Date: { type: Date },
         Scoreboard: { type: Object },

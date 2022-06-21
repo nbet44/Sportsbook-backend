@@ -1,5 +1,12 @@
 const { default: axios } = require("axios");
 const getUuid = require('uuid-by-string')
+const FormData = require('form-data');
+const fs = require('fs');
+const baseController = require("../controller/baseController");
+const { token, XG_siteId, XG_publicKey } = require("../config/index");
+const { paymentHistoryModel } = require('../models/paymentHistoryModel');
+const { userModel } = require("../models/userModel");
+const { leagueTeamModel } = require("../models/leagueTeamModel");
 const {
     bwinPrematchModel,
     bwinInPlayModel,
@@ -7,13 +14,6 @@ const {
     xpressGameModel,
     bwinHistoryModel
 } = require("../models/bwinSportsModel");
-const { paymentHistoryModel } = require('../models/paymentHistoryModel');
-const { userModel } = require("../models/userModel");
-const { leagueTeamModel } = require("../models/leagueTeamModel");
-const baseController = require("../controller/baseController");
-const { token, XG_siteId, XG_publicKey } = require("../config/index");
-var FormData = require('form-data');
-const fs = require('fs');
 var prematchTeamNameData = "";
 var liveTeamNameData = "";
 var onlineUsers = {}
@@ -452,9 +452,7 @@ module.exports = async (io) => {
         await getRealtimePreData()
         await getLiveDataMatch()
         await removeOldMatchs()
-    }, 1000 * 60 * 10);
-
-
+    }, 1000 * 60 * 0.5);
 
     //Socket connnect part----------------
     io.on("connection", async (socket) => {

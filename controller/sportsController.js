@@ -4,8 +4,9 @@ const { userModel } = require("../models/userModel");
 const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinResultModel, bwinEventModel, bwinFavoriteModel } = require("../models/bwinSportsModel");
 const { siteSettingModel } = require('../models/siteSettingModel');
 const { paymentHistoryModel } = require("../models/paymentHistoryModel");
-const { token, siteId } = require("../config/index");
+const { token, db } = require("../config/index");
 const uniqid = require('uniqid');
+const mongooseMulti = require('mongoose-multi');
 // Adding redis cache
 const redisCreateClient = require('redis').createClient;
 const redisClient = redisCreateClient();
@@ -14,6 +15,8 @@ const redisClient = redisCreateClient();
 })();
 redisClient.on('error', (err) => console.log('Redis Client Error', err));
 
+const schemaFile = require('../models/multischemas.js');
+const multiDB = mongooseMulti.start({ "betsapi": "mongodb://localhost:27017/betsapi" }, schemaFile);
 
 exports.getAllMarketAction = async (req, res, next) => {
     var data = req.body;
@@ -351,11 +354,176 @@ exports.getHistoryAction = async (req, res, next) => {
     return true
 }
 
+const bet365Odd = async (bet, bet365) => {
+    result = {}
+    if (bet.period == "RegularTime") {
+        switch (bet.marketType) {
+            case "3way": {
+                let odd = bet365.main.sp.full_time_result.odds
+                if (bet.team === '1') result[bet.id] = odd[0].odds
+                if (bet.team === 'Draw') result[bet.id] = odd[1].odds
+                if (bet.team === '2') result[bet.id] = odd[2].odds
+                break
+            }
+            case "Handicap": {
+                let odd = bet365.main.sp.asian_handicap.odds
+                if (bet.team === '1') result[bet.id] = odd[0].odds
+                if (bet.team === '2') result[bet.id] = odd[1].odds
+                break
+            }
+            case "Over/Under": {
+                let odd = bet365.main.sp.goals_over_under.odds
+                if (bet.team === '1') result[bet.id] = odd[0].odds
+                if (bet.team === '2') result[bet.id] = odd[1].odds
+                break
+            }
+        }
+    } else {
+        switch (bet.marketType) {
+            case "3way": {
+                let odd = bet365.half.sp.half_time_result.odds
+                if (bet.team === '1') result[bet.id] = odd[0].odds
+                if (bet.team === 'Draw') result[bet.id] = odd[1].odds
+                if (bet.team === '2') result[bet.id] = odd[2].odds
+                break
+            }
+            case "Handicap": {
+                let odd = bet365.half.sp["1st_half_asian_handicap"].odds
+                if (bet.team === '1') result[bet.id] = odd[0].odds
+                if (bet.team === '2') result[bet.id] = odd[1].odds
+                break
+            }
+            // case "Over/Under": {
+            //     let odd = bet365.half.sp.goals_over_under.odds
+            //     if (bet.team === '1') result.bet365[bet.id] = odd[0].odds
+            //     if (bet.team === '2') result.bet365[bet.id] = odd[1].odds
+            // }
+        }
+    }
+    return result
+}
+
+const sbobetOdd = async (bet, sbobet) => {
+    result = {}
+    if (bet.period == "RegularTime") {
+        switch (bet.marketType) {
+            case "3way": {
+                let index = sbobet.markets.findIndex(e => e.display == "1X2")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0]
+                    if (bet.team === 'Draw') result[bet.id] = odd[1]
+                    if (bet.team === '2') result[bet.id] = odd[2]
+                }
+                break
+            }
+            case "Handicap": {
+                let index = sbobet.markets.findIndex(e => e.display == "Asian Handicap")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0]
+                    if (bet.team === '2') result[bet.id] = odd[1]
+                }
+                break
+            }
+            case "Over/Under": {
+                let index = sbobet.markets.findIndex(e => e.display == "Over Under")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0]
+                    if (bet.team === '2') result[bet.id] = odd[1]
+                }
+                break
+            }
+        }
+    } else {
+        switch (bet.marketType) {
+            case "3way": {
+                let index = sbobet.markets.findIndex(e => e.display == "First Half 1X2")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0].odds
+                    if (bet.team === 'Draw') result[bet.id] = odd[1].odds
+                    if (bet.team === '2') result[bet.id] = odd[2].odds
+                }
+                break
+            }
+            case "Handicap": {
+                let index = sbobet.markets.findIndex(e => e.display == "First Half Asian Handicap")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0].odds
+                    if (bet.team === '2') result[bet.id] = odd[1].odds
+                }
+                break
+            }
+            case "Over/Under": {
+                let index = sbobet.markets.findIndex(e => e.display == "First Half Over Under")
+                if (index != -1) {
+                    let odd = sbobet.markets[index].odds
+                    if (bet.team === '1') result[bet.id] = odd[0].odds
+                    if (bet.team === '2') result[bet.id] = odd[1].odds
+                }
+                break
+            }
+        }
+    }
+    return result
+}
+
+exports.userBetAction_ = async (req, res, nex) => {
+    var data = req.body;
+    let oddData = {
+        nbet: {},
+        bet365: {},
+        sbobet: {},
+    }
+    for (var i in data) {
+        if (data[i].our_event_id) {
+            let bet = data[i]
+
+            let bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
+            let sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_preevents, { OurId: bet.our_event_id })
+            oddData.nbet = { ...oddData.nbet, [bet.id]: bet.odds }
+            if (bet365) {
+                let re = await bet365Odd(bet, bet365)
+                oddData.bet365 = { ...oddData.bet365, ...re }
+            }
+            if (sbobet) {
+                let re = await sbobetOdd(bet, sbobet)
+                oddData.sbobet = { ...oddData.sbobet, ...re }
+            }
+        }
+    }
+    var userData = await baseController.BfindOne(userModel, { _id: data._id },)
+    res.json({ status: 200, data: { userData, result: [], oddData } });
+}
 exports.userBetAction = async (req, res, next) => {
     var result = [];
+    let oddData = {
+        nbet44: {},
+        bet365: {},
+        sbobet: {},
+    }
     var data = req.body;
     var betId = uniqid()
     for (var i in data) {
+        if (data[i].our_event_id) {
+            let bet = data[i]
+
+            let bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
+            let sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_preevents, { OurId: bet.our_event_id })
+            oddData.nbet44 = { ...oddData.nbet44, [bet.id]: bet.odds }
+            if (bet365) {
+                let re = await bet365Odd(bet, bet365)
+                oddData.bet365 = { ...oddData.bet365, ...re }
+            }
+            if (sbobet) {
+                let re = await sbobetOdd(bet, sbobet)
+                oddData.sbobet = { ...oddData.sbobet, ...re }
+            }
+        }
+
         if (data.slipType === "single") {
             betId = uniqid()
         }
@@ -381,7 +549,7 @@ exports.userBetAction = async (req, res, next) => {
     }
     var userData = await baseController.BfindOneAndUpdate(userModel, { _id: data._id }, { $inc: { 'balance': (Math.abs(parseInt(data.totalAmount)) * -1) } });
     var updateAgent = await baseController.BfindOneAndUpdate(userModel, { _id: data.agentId }, { $inc: { 'balance': (Math.abs(parseInt(data.totalAmount)) * 1) } });
-    res.json({ status: 200, data: { userData, result } });
+    res.json({ status: 200, data: { userData, result, oddData } });
 }
 
 exports.getLiveAction = async (req, res, next) => {
