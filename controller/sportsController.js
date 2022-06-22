@@ -610,7 +610,7 @@ exports.getLiveAction = async (req, res, next) => {
     //     }
     // }
     // console.log(eventData)
-    console.log(Object.keys(eventData))
+    console.log(Object.keys(leagueData).length, Object.keys(eventData).length)
     return res.json({ status: 200, data: { leagueData, eventData } });
 }
 
@@ -772,4 +772,11 @@ exports.getMatchAction = async (req, res, next) => {
     }
     res.json({ status: 200, data: eventData })
     return true;
+}
+
+exports.clear = async (req, res, nex) => {
+    await bwinPrematchModel.deleteMany()
+    await bwinInPlayModel.deleteMany()
+    await bwinEventModel.deleteMany()
+    res.json({ status: 200 })
 }

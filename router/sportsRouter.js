@@ -18,4 +18,5 @@ router.post("/set-result", sportsController.setResultAction);
 router.post("/set-live-result", sportsController.setLiveResultAction);
 router.post("/get-favorite", sportsController.getFavoriteAction);
 router.post("/save-favorite", sportsController.saveFavoriteAction);
+router.post("/clear", sportsController.clear);
 module.exports = router;
