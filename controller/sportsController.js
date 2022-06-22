@@ -508,7 +508,7 @@ exports.userBetAction = async (req, res, next) => {
     var data = req.body;
     var betId = uniqid()
     for (var i in data) {
-        if (data[i].our_event_id) {
+        if (data[i] && data[i].our_event_id) {
             let bet = data[i]
 
             let bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
