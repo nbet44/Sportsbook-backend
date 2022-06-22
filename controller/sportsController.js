@@ -620,16 +620,15 @@ exports.getLeagueAction = async (req, res, next) => {
     var firstDate = await baseController.get_stand_date_first(data.date)
     var endDate = await baseController.get_stand_date_end1(data.date)
     var settingData = { leagueSort: { value: 'RegionName', label: 'A~Z' } };
-    //await baseController.BfindOne(siteSettingModel, { siteId: siteId });
     var sortCondition = { [settingData.leagueSort.value]: -1 };
-    var leagueIdArray = await bwinPrematchModel.distinct("LeagueId", { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, Date: { $gte: firstDate, $lt: endDate } })
+    var leagueIdArray = await bwinPrematchModel.distinct("LeagueId", { SportId: data.sportId, AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, Date: { $gte: firstDate, $lt: endDate } })
     for (var i in leagueIdArray) {
 
         let sportsData = await redisClient.get(`leagueData_${leagueIdArray[i]}`);
 
         if (!sportsData) {
             console.log('from DB');
-            sportsData = await bwinPrematchModel.findOne({ LeagueId: leagueIdArray[i] }).sort(sortCondition);
+            sportsData = await bwinPrematchModel.findOne({ LeagueId: leagueIdArray[i], SportId: data.sportId, }).sort(sortCondition);
             await redisClient.set(`leagueData_${leagueIdArray[i]}`, JSON.stringify(sportsData));
         }
         else {

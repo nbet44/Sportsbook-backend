@@ -3,6 +3,14 @@ module.exports = {
         "bet777": "mongodb://localhost:27017/bet777",
         "betsapi": "mongodb://localhost:27017/betsapi"
     },
+    "sportList": [
+        4, //Football
+        56, //Table Tennis
+        7, //Basketball
+        5, //Tennis
+        12, //Ice Hockey
+        18, //Volleyball 
+    ],
     "DBCONNECT": "mongodb://127.0.0.1:27017/bet777?serverSelectionTimeoutMS=5000&connectTimeoutMS=10000&authSource=admin",
     "token": "94840-yL6oCP0lnJl8xM",
     "serverPort": 8000,

@@ -1,17 +1,16 @@
 const { default: axios } = require("axios");
 const getUuid = require('uuid-by-string')
-const FormData = require('form-data');
 const fs = require('fs');
 const baseController = require("../controller/baseController");
-const { token, XG_siteId, XG_publicKey } = require("../config/index");
+const { token, sportList, } = require("../config/index");
 const { paymentHistoryModel } = require('../models/paymentHistoryModel');
 const { userModel } = require("../models/userModel");
 const { leagueTeamModel } = require("../models/leagueTeamModel");
+const moment = require('moment');
 const {
     bwinPrematchModel,
     bwinInPlayModel,
     bwinEventModel,
-    xpressGameModel,
     bwinHistoryModel
 } = require("../models/bwinSportsModel");
 var prematchTeamNameData = "";
@@ -19,212 +18,6 @@ var liveTeamNameData = "";
 var onlineUsers = {}
 
 module.exports = async (io) => {
-    const getLiveDataMatch = async () => {
-        request = {
-            method: "get",
-            url: "https://api.b365api.com/v1/bwin/inplay?token=" + token,
-        };
-        try {
-            response = await axios(request);
-            if (response.data.success === 1) {
-                let data = response.data.results
-                let sendEventIds = []
-                let pages = Math.ceil(data.length / 10)
-                for (let i = 0; i < pages; i++) {
-                    let tempEventIds = ""
-                    for (let j = i * 10; j < (i + 1) * 10; j++) {
-                        if (data[j]) {
-                            var saveData = data[j];
-                            saveData.type = "inplay";
-                            saveData.Id = saveData.Id.replace(":", "0");
-                            await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
-                            var isCheck = await baseController.BfindOneAndUpdate(
-                                bwinInPlayModel,
-                                { Id: saveData.Id },
-                                saveData
-                            );
-                            tempEventIds += saveData.Id
-                            if (!isCheck) {
-                                console.log("---" + saveData.Id + "---");
-                            }
-                            if (j + 1 != (i + 1) * 10) {
-                                tempEventIds += ","
-                            }
-                        }
-                    }
-                    sendEventIds.push(tempEventIds)
-                }
-                let funcs = []
-                for (let i in sendEventIds) {
-                    funcs.push(getRealtimeLiveMarket(sendEventIds[i]))
-                }
-                Promise.all(funcs)
-            }
-        } catch (error) {
-            console.log('get live data error')
-        }
-    }
-
-    const getRealtimeLiveMarket = async (ids) => {
-        let data = await getMarketsById(ids)
-        for (let i in data) {
-            if (data[i].Markets.length > 0) {
-                // if (data[i].SportId === 4) {
-                //   await writeLiveTeamNameData([data[i].LeagueName, data[i].RegionName, data[i].HomeTeam, data[i].AwayTeam])
-                // }
-                data[i].Id = data[i].Id.replace(":", "0");
-                await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
-            } else if (data[i].optionMarkets.length > 0) {
-                // if (data[i].SportId === 4) {
-                //   await writeLiveTeamNameData([data[i].LeagueName, data[i].RegionName, data[i].HomeTeam, data[i].AwayTeam])
-                // }
-                data[i].Id = data[i].Id.replace(":", "0");
-                let markets = []
-                for (var j in data[i].optionMarkets) {
-                    let convertData = {}
-                    let optionMarkets = data[i].optionMarkets[j]
-                    convertData.id = optionMarkets.id
-                    convertData.name = optionMarkets.name
-                    convertData.isMain = optionMarkets.isMain
-                    convertData.visibility = optionMarkets.status
-                    for (var k in optionMarkets.parameters) {
-                        convertData[optionMarkets.parameters[k].key] = optionMarkets.parameters[k].value
-                    }
-                    // convertData.marketType = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.marketType ? optionMarkets.grouping.parameters.marketType : ""
-                    convertData.attr = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.attr ? Math.abs(parseFloat(optionMarkets.grouping.parameters.attr)) : ""
-                    convertData.results = []
-                    for (var k in optionMarkets.options) {
-                        convertData.results.push({
-                            odds: optionMarkets.options[k].price.odds,
-                            visibility: optionMarkets.options[k].status,
-                            americanOdds: optionMarkets.options[k].price.americanOdds,
-                            id: optionMarkets.options[k].id,
-                            name: optionMarkets.options[k].name
-                        })
-                    }
-                    markets.push(convertData)
-                }
-                data[i].Markets = markets
-                await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
-            } else {
-                data[i].Id = data[i].Id.replace(":", "0");
-                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id })
-            }
-        }
-        // putFileData("live_team_names.txt", liveTeamNameData);
-    }
-
-    const getMarketsById = async (ids) => {
-        return new Promise(async function (resolve, reject) {
-            const request = {
-                method: "get",
-                url: "https://api.b365api.com/v1/bwin/event?token=" + token + "&event_id=" + ids
-            }
-            axios(request).then(async function (response) {
-                if (response.data && response.data.success) {
-                    if (response.data.results && response.data.results.length) {
-                        resolve(response.data.results)
-                    } else {
-                        resolve([])
-                    }
-                }
-            })
-                .catch(function (error) {
-                    resolve([])
-                });
-        })
-    }
-
-    const getPreDataPage = async (param) => {
-        let config = {
-            method: 'get',
-            url: "https://api.b365api.com/v1/bwin/prematch?token=" + token + param,
-            headers: {},
-            data: {
-                page: 1,
-                skip_markets: 1
-            }
-        };
-        axios(config).then(async function (response) {
-            let pager = response.data.pager
-            let page = Math.round(pager.total / pager.per_page)
-            let requests = []
-            for (let i = 0; i < page; i++) {
-                requests.push(getRealtimePreData(i + 1))
-            }
-            Promise.all(requests);
-        })
-            .catch(function (error) { });
-    }
-
-    const getRealtimePreData = async (page) => {
-        let config = {
-            method: 'get',
-            url: "https://api.b365api.com/v1/bwin/prematch?token=" + token + "&sport_id=4",
-            headers: {},
-            data: {
-                page
-            }
-        };
-        axios(config).then(async function (response) {
-            if (response.data && response.data.success) {
-                let data = response.data.results
-                for (let i in data) {
-                    var saveData = data[i];
-                    saveData.type = "prematch";
-                    // saveData.Id = saveData.Id.replace(":", "0");
-                    if (saveData.Markets && saveData.Markets.length > 0) {
-                        // if (saveData.SportId === 4) {
-                        //   await writePrematchTeamNameData([saveData.LeagueName, saveData.RegionName, saveData.HomeTeam, saveData.AwayTeam])
-                        // }
-                        var isCheck = await baseController.BfindOneAndUpdate(
-                            bwinPrematchModel,
-                            { Id: saveData.Id },
-                            saveData
-                        );
-                        if (!isCheck) {
-                            console.log("---" + saveData.Id + "---");
-                        }
-                    } else if (saveData.optionMarkets.length > 0) {
-                        // if (saveData.SportId === 4) {
-                        //   await writePrematchTeamNameData([saveData.LeagueName, saveData.RegionName, saveData.HomeTeam, saveData.AwayTeam])
-                        // }
-                        let markets = []
-                        for (var j in saveData.optionMarkets) {
-                            let convertData = {}
-                            let optionMarkets = saveData.optionMarkets[j]
-                            convertData.id = optionMarkets.id
-                            convertData.name = optionMarkets.name
-                            convertData.isMain = optionMarkets.isMain
-                            convertData.visibility = optionMarkets.status
-                            for (var k in optionMarkets.parameters) {
-                                convertData[optionMarkets.parameters[k].key] = optionMarkets.parameters[k].value
-                            }
-                            // convertData.marketType = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.marketType ? optionMarkets.grouping.parameters.marketType : ""
-                            convertData.attr = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.attr ? Math.abs(parseFloat(optionMarkets.grouping.parameters.attr)) : ""
-                            convertData.results = []
-                            for (var k in optionMarkets.options) {
-                                convertData.results.push({
-                                    odds: optionMarkets.options[k].price.odds,
-                                    visibility: optionMarkets.options[k].status,
-                                    americanOdds: optionMarkets.options[k].price.americanOdds,
-                                    id: optionMarkets.options[k].id,
-                                    name: optionMarkets.options[k].name
-                                })
-                            }
-                            markets.push(convertData)
-                        }
-                        saveData.Markets = markets
-                        // console.log("--- convert optionMarkets ---")
-                        await baseController.BfindOneAndUpdate(bwinPrematchModel, { Id: saveData.Id }, saveData)
-                    }
-                }
-                // putFileData("prematch_team_names.txt", prematchTeamNameData);
-            }
-        })
-            .catch(function (error) { });
-    }
-
     const setScoreFinished = async () => {
         var data = await baseController.Bfind(bwinEventModel, { 'Scoreboard.period': 'Finished' })
         for (var i in data) {
@@ -273,6 +66,42 @@ module.exports = async (io) => {
         // await bwinEventModel.deleteMany({ $or: [{ 'Scoreboard.period': 'Finished' }, { updatedAt: { $lte: currentDate } }] })
     }
 
+    const makeWeeklyCredit = async () => {
+        var registeredHours = 3;
+        var todayDay = new Date().getDay()
+        var agentData = await baseController.Bfind(userModel, { role: "agent" });
+        for (var i in agentData) {
+            if (agentData[i].weeklyCreditResetState && agentData[i].weeklyCreditResetState.value === "true") {
+                var autoWeeklyCredit = agentData[i].autoWeeklyCredit
+                if (todayDay === parseInt(agentData[i].weeklyCreditResetDay.value)) {
+                    console.log("--- match weekly credit day ---");
+                    if (registeredHours === new Date().getHours()) {
+                        console.log("--- match weekly credit hour ---");
+                        var parentData = await baseController.BfindOne(userModel, { _id: agentData[i].pid });
+                        if (parseInt(parentData.balance) < parseInt(autoWeeklyCredit)) {
+                            console.log("--- parent balance isn't enough for auto weekly credit ---")
+                            return false;
+                        }
+                        await baseController.BfindOneAndUpdate(userModel, { _id: agentData[i]._id }, { $inc: { 'balance': (Math.abs(parseInt(autoWeeklyCredit)) * 1) } });
+                        await baseController.BfindOneAndUpdate(userModel, { _id: parentData._id }, { $inc: { 'balance': (Math.abs(parseInt(autoWeeklyCredit)) * -1) } });
+                        saveData = {
+                            userId: agentData[i]._id,
+                            currency: agentData[i].currency,
+                            role: agentData[i].role,
+                            pid: parentData._id,
+                            agentId: parentData._id,
+                            amount: autoWeeklyCredit
+                        }
+                        await baseController.data_save(saveData, paymentHistoryModel);
+                    } else {
+                        await baseController.BfindOneAndUpdate(userModel, { _id: agentData[i]._id }, { weeklyCreditProceed: false });
+                    }
+                }
+            }
+        }
+    }
+
+    //manage file start
     async function writePrematchTeamNameData(data) {
         var nameType = { 0: "league", 1: "country", 2: "team", 3: "team" }
         for (var i in data) {
@@ -317,86 +146,229 @@ module.exports = async (io) => {
         //   console.log('have done team_names.txt');
         // });
     }
+    //manage file end
 
-    const makeWeeklyCredit = async () => {
-        var registeredHours = 3;
-        var todayDay = new Date().getDay()
-        var agentData = await baseController.Bfind(userModel, { role: "agent" });
-        for (var i in agentData) {
-            if (agentData[i].weeklyCreditResetState && agentData[i].weeklyCreditResetState.value === "true") {
-                var autoWeeklyCredit = agentData[i].autoWeeklyCredit
-                if (todayDay === parseInt(agentData[i].weeklyCreditResetDay.value)) {
-                    console.log("--- match weekly credit day ---");
-                    if (registeredHours === new Date().getHours()) {
-                        console.log("--- match weekly credit hour ---");
-                        var parentData = await baseController.BfindOne(userModel, { _id: agentData[i].pid });
-                        if (parseInt(parentData.balance) < parseInt(autoWeeklyCredit)) {
-                            console.log("--- parent balance isn't enough for auto weekly credit ---")
-                            return false;
+    //get live macth start 
+    const liveMatchBwin = async () => {
+        for (let i = 0; i < sportList.length; i++) {
+            await getLiveDataMatch(sportList[i])
+        }
+    }
+
+    const getLiveDataMatch = async (sport_id = 4) => {
+        request = {
+            method: "get",
+            url: "https://api.b365api.com/v1/bwin/inplay?token=" + token + "&sport_id=" + sport_id,
+        };
+        try {
+            response = await axios(request);
+            if (response.data.success === 1) {
+                let data = response.data.results
+                let sendEventIds = []
+                let pages = Math.ceil(data.length / 10)
+                for (let i = 0; i < pages; i++) {
+                    let tempEventIds = ""
+                    for (let j = i * 10; j < (i + 1) * 10; j++) {
+                        if (data[j]) {
+                            var saveData = data[j];
+                            saveData.type = "inplay";
+                            saveData.Id = saveData.Id.replace(":", "0");
+                            await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
+                            var isCheck = await baseController.BfindOneAndUpdate(
+                                bwinInPlayModel,
+                                { Id: saveData.Id },
+                                saveData
+                            );
+                            tempEventIds += saveData.Id
+                            if (!isCheck) {
+                                console.log("---Didn't save this match on Inplay : " + saveData.Id + "---");
+                            }
+                            if (j + 1 != (i + 1) * 10) {
+                                tempEventIds += ","
+                            }
                         }
-                        await baseController.BfindOneAndUpdate(userModel, { _id: agentData[i]._id }, { $inc: { 'balance': (Math.abs(parseInt(autoWeeklyCredit)) * 1) } });
-                        await baseController.BfindOneAndUpdate(userModel, { _id: parentData._id }, { $inc: { 'balance': (Math.abs(parseInt(autoWeeklyCredit)) * -1) } });
-                        saveData = {
-                            userId: agentData[i]._id,
-                            currency: agentData[i].currency,
-                            role: agentData[i].role,
-                            pid: parentData._id,
-                            agentId: parentData._id,
-                            amount: autoWeeklyCredit
-                        }
-                        await baseController.data_save(saveData, paymentHistoryModel);
-                    } else {
-                        await baseController.BfindOneAndUpdate(userModel, { _id: agentData[i]._id }, { weeklyCreditProceed: false });
                     }
+                    sendEventIds.push(tempEventIds)
                 }
+                let funcs = []
+                for (let i in sendEventIds) {
+                    funcs.push(getRealtimeLiveMarket(sendEventIds[i]))
+                }
+                Promise.all(funcs)
+            }
+        } catch (error) {
+            console.log('get live data error')
+        }
+    }
+
+    const getRealtimeLiveMarket = async (ids) => {
+        let data = await getMarketsById(ids)
+        for (let i in data) {
+            data[i].Id = data[i].Id.replace(":", "0");
+            if (data[i].Markets.length > 0) {
+                await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
+            } else if (data[i].optionMarkets.length > 0) {
+                let markets = []
+                for (var j in data[i].optionMarkets) {
+                    let convertData = {}
+                    let optionMarkets = data[i].optionMarkets[j]
+                    convertData.id = optionMarkets.id
+                    convertData.name = optionMarkets.name
+                    convertData.isMain = optionMarkets.isMain
+                    convertData.visibility = optionMarkets.status
+                    for (var k in optionMarkets.parameters) {
+                        convertData[optionMarkets.parameters[k].key] = optionMarkets.parameters[k].value
+                    }
+                    convertData.attr = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.attr ? Math.abs(parseFloat(optionMarkets.grouping.parameters.attr)) : ""
+                    convertData.results = []
+                    for (var k in optionMarkets.options) {
+                        convertData.results.push({
+                            odds: optionMarkets.options[k].price.odds,
+                            visibility: optionMarkets.options[k].status,
+                            americanOdds: optionMarkets.options[k].price.americanOdds,
+                            id: optionMarkets.options[k].id,
+                            name: optionMarkets.options[k].name
+                        })
+                    }
+                    markets.push(convertData)
+                }
+                data[i].Markets = markets
+                await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
+            } else {
+                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id })
             }
         }
     }
 
-    async function run() {
-        // var data = await baseController.Bfind(leagueTeamModel);
-        // for (var i in data) {
-        //   prematchTeamNameData = prematchTeamNameData + "\n" + data[i].name;
-        // }
-        let config = {
-            method: 'get',
-            url: "https://api.b365api.com/v1/bwin/prematch?token=" + token + "&day=20211209&sport_id=4&skip_markets=1",
-        };
-        axios(config).then(async function (response) {
-            if (response.data && response.data.success) {
-                var data = response.data.results
-                for (var i in data) {
-                    await writePrematchTeamNameData([data[i].LeagueName, data[i].RegionName, data[i].HomeTeam, data[i].AwayTeam])
-                }
+    const getMarketsById = async (ids) => {
+        return new Promise(async function (resolve, reject) {
+            const request = {
+                method: "get",
+                url: "https://api.b365api.com/v1/bwin/event?token=" + token + "&event_id=" + ids
             }
-            putFileData("prematch_team_names.txt", prematchTeamNameData);
+            axios(request).then(async function (response) {
+                if (response.data && response.data.success) {
+                    if (response.data.results && response.data.results.length) {
+                        resolve(response.data.results)
+                    } else {
+                        resolve([])
+                    }
+                }
+            })
+                .catch(function (error) {
+                    resolve([])
+                });
         })
-        // var output = {};
-        // var teamNames = await baseController.Bfind(leagueTeamModel);
-        // for (var i in teamNames) {
-        //   var id = getUuid(teamNames[i].name);
-        //   output[id] = teamNames[i].name;
-        // }
-        // fs.writeFile("teamNames.json", JSON.stringify(output), function (err) {
-        //   console.log(err);
-        // });
+    }
+    //get live macth end
+
+    //get premacth start
+    const preMatchBwin = async () => {
+        for (let i = 0; i < sportList.length; i++) {
+            for (let i = 0; i <= 4; i++) {
+                await getPreDataPage(moment().add(i, 'days').format('yyMMDD'), sportList[i])
+            }
+        }
     }
 
-    setTimeout(async function () {
-        var monthArray = { 0: "01", 1: "02", 2: "03", 3: "04", 4: "05", 5: "06", 6: "07", 7: "08", 8: "09", 9: "10", 10: "11", 11: "12" };
-        var currentDate = new Date();
+    const getPreDataPage = async (day, sport_id) => {
+        let config = {
+            method: 'get',
+            url: "https://api.b365api.com/v1/bwin/prematch",
+            headers: {},
+            data: {
+                token,
+                sport_id,
+                day,
+                page: 1,
+                skip_markets: 1
+            }
+        };
+        axios(config).then(async (response) => {
+            let pager = response.data.pager
+            let page = Math.ceil(pager.total / pager.per_page)
+            let funcs = []
+            for (let i = 1; i <= page; i++) {
+                funcs.push(getRealtimePreData(i, sport_id))
+            }
+            Promise.all(funcs);
+        })
+            .catch((error) => {
+                console.log('get page function error ' + error.message)
+            });
+    }
 
-        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate())))
-        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 1)))
-        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 2)))
-        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 3)))
-        await getPreDataPage("&day=" + (currentDate.getFullYear() + monthArray[currentDate.getMonth()] + (currentDate.getDate() + 4)))
-        await getLiveDataMatch()
-        // await makeWeeklyCredit()
+    const getRealtimePreData = async (page, sport_id) => {
+        let config = {
+            method: 'get',
+            url: "https://api.b365api.com/v1/bwin/prematch",
+            headers: {},
+            data: {
+                token,
+                sport_id,
+                page
+            }
+        };
+        axios(config).then(async (response) => {
+            if (response.data && response.data.success) {
+                let data = response.data.results
+                for (let i in data) {
+                    let saveData = data[i];
+                    // saveData.Id = saveData.Id.replace(":", "0");
+                    saveData.type = "prematch";
+                    if (saveData.Markets && saveData.Markets.length > 0) {
+                        var isCheck = await baseController.BfindOneAndUpdate(
+                            bwinPrematchModel,
+                            { Id: saveData.Id },
+                            saveData
+                        );
+                        if (!isCheck) {
+                            console.log("---" + saveData.Id + "---");
+                        }
+                    } else if (saveData.optionMarkets.length > 0) {
+                        let markets = []
+                        for (var j in saveData.optionMarkets) {
+                            let convertData = {}
+                            let optionMarkets = saveData.optionMarkets[j]
+                            convertData.id = optionMarkets.id
+                            convertData.name = optionMarkets.name
+                            convertData.isMain = optionMarkets.isMain
+                            convertData.visibility = optionMarkets.status
+                            for (var k in optionMarkets.parameters) {
+                                convertData[optionMarkets.parameters[k].key] = optionMarkets.parameters[k].value
+                            }
+                            convertData.attr = optionMarkets.grouping.parameters && optionMarkets.grouping.parameters.attr ? Math.abs(parseFloat(optionMarkets.grouping.parameters.attr)) : ""
+                            convertData.results = []
+                            for (var k in optionMarkets.options) {
+                                convertData.results.push({
+                                    odds: optionMarkets.options[k].price.odds,
+                                    visibility: optionMarkets.options[k].status,
+                                    americanOdds: optionMarkets.options[k].price.americanOdds,
+                                    id: optionMarkets.options[k].id,
+                                    name: optionMarkets.options[k].name
+                                })
+                            }
+                            markets.push(convertData)
+                        }
+                        saveData.Markets = markets
+                        await baseController.BfindOneAndUpdate(bwinPrematchModel, { Id: saveData.Id }, saveData)
+                    }
+                }
+            }
+        })
+            .catch((error) => {
+                console.log('get premacth data error' + error.message)
+            });
+    }
+    //get premacth end
 
-        var userData = await baseController.BfindOne(userModel, { userId: "admin" });
+    const initial = async () => {
+        await makeWeeklyCredit()
+        await removeOldMatchs()
+
+        let userData = await baseController.BfindOne(userModel, { userId: "admin" });
         if (!userData) {
-            var isCheck = await baseController.data_save({
+            let isCheck = await baseController.data_save({
                 username: "admin",
                 password: "12345678",
                 userId: "admin",
@@ -409,52 +381,21 @@ module.exports = async (io) => {
                     player: true
                 }
             }, userModel);
-            console.log(isCheck)
+            if (isCheck) {
+                console.log("Admin account created!")
+            }
         }
-
-        var data = new FormData();
-        data.append('siteId', XG_siteId);
-        data.append('publicKey', XG_publicKey);
-
-        // try {
-        // var request = {
-        //     method: 'post',
-        //     url: 'https://winbet555stg-api.staging-hub.xpressgaming.net/api/v3/get-game-list',
-        //     headers: {
-        //         ...data.getHeaders()
-        //     },
-        //     data: data
-        // };
-
-        // var response = await axios(request);
-        // if (response.data.status === true) {
-        //     var data = response.data.data;
-        //     for (var i in data) {
-        //         var saveData = data[i];
-        //         var isCheck = await baseController.BfindOneAndUpdate(
-        //             xpressGameModel,
-        //             { gameId: saveData.gameId },
-        //             saveData
-        //         );
-        //         if (!isCheck) {
-        //             console.log("---" + saveData.Id + "---");
-        //         }
-        //     }
-        // }
-        // } catch (error) {
-        //     console.log(error)
-        // }
-        await removeOldMatchs()
-    }, 1000 * 5);
+    }
+    initial()
 
     setInterval(async function () {
         console.log("refresh");
-        await getRealtimePreData()
-        await getLiveDataMatch()
+        await preMatchBwin()
+        await liveMatchBwin()
         await removeOldMatchs()
-    }, 1000 * 60 * 0.5);
+    }, 1000 * 60 * 5);
 
-    //Socket connnect part----------------
+    //Socket connnect part
     io.on("connection", async (socket) => {
         var query = socket.handshake.query;
         var roomName = query.roomName;
