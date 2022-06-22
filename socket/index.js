@@ -388,12 +388,17 @@ module.exports = async (io) => {
     }
     initial()
 
+
     setInterval(async function () {
-        console.log("refresh");
-        await preMatchBwin()
+        console.log('refresh live macth')
         await liveMatchBwin()
+    }, 100 * 60 * 5)
+
+    setInterval(async function () {
+        console.log("refresh premacth");
+        await preMatchBwin()
         await removeOldMatchs()
-    }, 1000 * 60 * 5);
+    }, 1000 * 60 * 15);
 
     //Socket connnect part
     io.on("connection", async (socket) => {
