@@ -365,6 +365,8 @@ module.exports = async (io) => {
     const initial = async () => {
         await makeWeeklyCredit()
         await removeOldMatchs()
+        await liveMatchBwin()
+        await preMatchBwin()
 
         let userData = await baseController.BfindOne(userModel, { userId: "admin" });
         if (!userData) {
@@ -392,7 +394,7 @@ module.exports = async (io) => {
     setInterval(async function () {
         console.log('refresh live macth')
         await liveMatchBwin()
-    }, 100 * 60 * 5)
+    }, 1000 * 60 * 5)
 
     setInterval(async function () {
         console.log("refresh premacth");

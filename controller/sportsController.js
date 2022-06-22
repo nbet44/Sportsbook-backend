@@ -632,7 +632,6 @@ exports.getLeagueAction = async (req, res, next) => {
             await redisClient.set(`leagueData_${leagueIdArray[i]}`, JSON.stringify(sportsData));
         }
         else {
-            console.log('form Redis');
             sportsData = JSON.parse(sportsData);
         }
 
