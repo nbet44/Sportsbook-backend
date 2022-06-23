@@ -41,6 +41,7 @@ const bwinInPlayModel = () => {
         AwayTeam: { type: String },
         BetRadarId: { type: Number },
         IsPreMatch: { type: Boolean },
+        our_event_id: { type: String, default: "0000000" },
         Date: { type: Date },
         Scoreboard: { type: Object },
         type: { type: String },

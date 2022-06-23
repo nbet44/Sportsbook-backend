@@ -11,6 +11,7 @@ module.exports = {
         12, //Ice Hockey
         18, //Volleyball 
     ],
+    "SportsByname": { "Football": 1, "Table Tennis": 92, "Basketball": 18, "Tennis": 13, "Ice Hockey": 17, "Volleyball": 91 },
     "DBCONNECT": "mongodb://127.0.0.1:27017/bet777?serverSelectionTimeoutMS=5000&connectTimeoutMS=10000&authSource=admin",
     "token": "94840-yL6oCP0lnJl8xM",
     "serverPort": 8000,

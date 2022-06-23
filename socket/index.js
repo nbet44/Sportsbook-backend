@@ -173,6 +173,11 @@ module.exports = async (io) => {
                             var saveData = data[j];
                             saveData.type = "inplay";
                             saveData.Id = saveData.Id.replace(":", "0");
+                            let OurIdData = await baseController.BfindOne(bwinPrematchModel, { Id: saveData.Id })
+                            console.log(OurIdData, 'remove from practh modal')
+                            if (OurIdData) {
+                                saveData.our_event_id = OurIdData.our_event_id
+                            }
                             await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
                             var isCheck = await baseController.BfindOneAndUpdate(
                                 bwinInPlayModel,
@@ -265,8 +270,8 @@ module.exports = async (io) => {
     //get premacth start
     const preMatchBwin = async () => {
         for (let i = 0; i < sportList.length; i++) {
-            for (let i = 0; i <= 4; i++) {
-                await getPreDataPage(moment().add(i, 'days').format('yyMMDD'), sportList[i])
+            for (let j = 0; j <= 4; j++) {
+                await getPreDataPage(moment().add(j, 'days').format('yyMMDD'), sportList[i])
             }
         }
     }

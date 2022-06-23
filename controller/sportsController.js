@@ -4,7 +4,7 @@ const { userModel } = require("../models/userModel");
 const { bwinPrematchModel, bwinInPlayModel, bwinHistoryModel, bwinResultModel, bwinEventModel, bwinFavoriteModel } = require("../models/bwinSportsModel");
 const { siteSettingModel } = require('../models/siteSettingModel');
 const { paymentHistoryModel } = require("../models/paymentHistoryModel");
-const { token, db } = require("../config/index");
+const { token, db, SportsByname } = require("../config/index");
 const uniqid = require('uniqid');
 const mongooseMulti = require('mongoose-multi');
 // Adding redis cache
@@ -359,38 +359,67 @@ const bet365Odd = async (bet, bet365) => {
     if (bet.period == "RegularTime") {
         switch (bet.marketType) {
             case "3way": {
-                let odd = bet365.main.sp.full_time_result.odds
-                if (bet.team === '1') result[bet.id] = odd[0].odds
-                if (bet.team === 'Draw') result[bet.id] = odd[1].odds
-                if (bet.team === '2') result[bet.id] = odd[2].odds
+                let odds = bet365._doc.odds[`${SportsByname[bet.SportName]}_1`]
+                if (odds && odds.length) {
+                    let odd = odds.sort((a, b) => a.add_time - b.add_time)[0]
+                    if (bet.team === '1') result[bet.id] = odd.home_od
+                    if (bet.team === 'Draw') result[bet.id] = odd.draw_od
+                    if (bet.team === '2') result[bet.id] = odd.away_od
+                } else {
+                    result[bet.id] = "No"
+                }
                 break
             }
             case "Handicap": {
-                let odd = bet365.main.sp.asian_handicap.odds
-                if (bet.team === '1') result[bet.id] = odd[0].odds
-                if (bet.team === '2') result[bet.id] = odd[1].odds
+                let odds = bet365._doc.odds[`${SportsByname[bet.SportName]}_2`]
+                if (odds && odds.length) {
+                    let odd = odds.sort((a, b) => a.add_time - b.add_time)[0]
+                    if (bet.team === '1') result[bet.id] = odd.home_od
+                    if (bet.team === '2') result[bet.id] = odd.away_od
+                } else {
+                    result[bet.id] = "No"
+                }
                 break
             }
             case "Over/Under": {
-                let odd = bet365.main.sp.goals_over_under.odds
-                if (bet.team === '1') result[bet.id] = odd[0].odds
-                if (bet.team === '2') result[bet.id] = odd[1].odds
+                let odds = bet365._doc.odds[`${SportsByname[bet.SportName]}_3`]
+                if (odds && odds.length) {
+                    let odd = odds.sort((a, b) => a.add_time - b.add_time)[0]
+                    if (bet.team === '1') result[bet.id] = odd.over_od
+                    if (bet.team === '2') result[bet.id] = odd.under_od
+                } else {
+                    result[bet.id] = "No"
+                }
+                break
+            }
+            default: {
+                result[bet.id] = "No"
                 break
             }
         }
     } else {
         switch (bet.marketType) {
             case "3way": {
-                let odd = bet365.half.sp.half_time_result.odds
-                if (bet.team === '1') result[bet.id] = odd[0].odds
-                if (bet.team === 'Draw') result[bet.id] = odd[1].odds
-                if (bet.team === '2') result[bet.id] = odd[2].odds
+                let odds = bet365._doc.odds[`${SportsByname[bet.SportName]}_8`]
+                if (odds && odds.length) {
+                    let odd = odds.sort((a, b) => a.add_time - b.add_time)[0]
+                    if (bet.team === '1') result[bet.id] = odd.home_od
+                    if (bet.team === 'Draw') result[bet.id] = odd.draw_od
+                    if (bet.team === '2') result[bet.id] = odd.away_od
+                } else {
+                    result[bet.id] = "No"
+                }
                 break
             }
             case "Handicap": {
-                let odd = bet365.half.sp["1st_half_asian_handicap"].odds
-                if (bet.team === '1') result[bet.id] = odd[0].odds
-                if (bet.team === '2') result[bet.id] = odd[1].odds
+                let odds = bet365._doc.odds[`${SportsByname[bet.SportName]}_5`]
+                if (odds && odds.length) {
+                    let odd = odds.sort((a, b) => a.add_time - b.add_time)[0]
+                    if (bet.team === '1') result[bet.id] = odd.home_od
+                    if (bet.team === '2') result[bet.id] = odd.away_od
+                } else {
+                    result[bet.id] = "No"
+                }
                 break
             }
             // case "Over/Under": {
@@ -398,6 +427,10 @@ const bet365Odd = async (bet, bet365) => {
             //     if (bet.team === '1') result.bet365[bet.id] = odd[0].odds
             //     if (bet.team === '2') result.bet365[bet.id] = odd[1].odds
             // }
+            default: {
+                result[bet.id] = "No"
+                break
+            }
         }
     }
     return result
@@ -482,9 +515,10 @@ exports.userBetAction_ = async (req, res, nex) => {
         if (data[i].our_event_id) {
             let bet = data[i]
 
+            oddData.nbet = { ...oddData.nbet, [bet.id]: bet.odds }
+
             let bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
             let sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_preevents, { OurId: bet.our_event_id })
-            oddData.nbet = { ...oddData.nbet, [bet.id]: bet.odds }
             if (bet365) {
                 let re = await bet365Odd(bet, bet365)
                 oddData.bet365 = { ...oddData.bet365, ...re }
@@ -517,10 +551,14 @@ exports.userBetAction = async (req, res, next) => {
             if (bet365) {
                 let re = await bet365Odd(bet, bet365)
                 oddData.bet365 = { ...oddData.bet365, ...re }
+            } else {
+                oddData.bet365 = { ...oddData.bet365, [bet.id]: "No" }
             }
             if (sbobet) {
                 let re = await sbobetOdd(bet, sbobet)
                 oddData.sbobet = { ...oddData.sbobet, ...re }
+            } else {
+                oddData.sbobet = { ...oddData.sbobet, [bet.id]: "No" }
             }
         }
 
