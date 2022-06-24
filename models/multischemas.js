@@ -47,6 +47,29 @@ module.exports = {
             IsPreMatch: { type: Boolean },
             Value: { type: Object },
             updated_at: { type: Number }
+        }),
+
+        tbl_bet365_inplayEvent: new Schema({
+            bet365_id: { type: String, required: true },
+            OurId: { type: String, required: true },
+            SportId: { type: Number },
+            HomeTeam: { type: String },
+            AwayTeam: { type: String },
+            IsPreMatch: { type: Boolean },
+            stats: { type: Object },
+            odds: { type: Object },
+        }),
+
+        tbl_sbobet_inplayEvent: new Schema({
+            Id: { type: String, required: true },
+            OurId: { type: String, required: true },
+            SportId: { type: Number },
+            SportName: { type: String },
+            HomeTeam: { type: String },
+            AwayTeam: { type: String },
+            IsPreMatch: { type: Boolean },
+            markets: { type: Array },
+            updated_at: { type: Number }
         })
     }
 };

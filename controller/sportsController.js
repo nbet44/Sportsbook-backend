@@ -544,9 +544,15 @@ exports.userBetAction = async (req, res, next) => {
     for (var i in data) {
         if (data[i] && data[i].our_event_id) {
             let bet = data[i]
-
-            let bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
-            let sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_preevents, { OurId: bet.our_event_id })
+            let bet365 = {}
+            let sbobet = {}
+            if (bet.IsPreMatch) {
+                bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_preevents, { OurId: bet.our_event_id })
+                sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_preevents, { OurId: bet.our_event_id })
+            } else {
+                bet365 = await baseController.BfindOne(multiDB.betsapi.tbl_bet365_inplayEvent, { OurId: bet.our_event_id })
+                sbobet = await baseController.BfindOne(multiDB.betsapi.tbl_sbobet_inplayEvent, { OurId: bet.our_event_id })
+            }
             oddData.nbet44 = { ...oddData.nbet44, [bet.id]: bet.odds }
             if (bet365) {
                 let re = await bet365Odd(bet, bet365)

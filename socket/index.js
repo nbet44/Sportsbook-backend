@@ -173,11 +173,6 @@ module.exports = async (io) => {
                             var saveData = data[j];
                             saveData.type = "inplay";
                             saveData.Id = saveData.Id.replace(":", "0");
-                            let OurIdData = await baseController.BfindOne(bwinPrematchModel, { Id: saveData.Id })
-                            console.log(OurIdData, 'remove from practh modal')
-                            if (OurIdData) {
-                                saveData.our_event_id = OurIdData.our_event_id
-                            }
                             await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
                             var isCheck = await baseController.BfindOneAndUpdate(
                                 bwinInPlayModel,
@@ -202,7 +197,7 @@ module.exports = async (io) => {
                 Promise.all(funcs)
             }
         } catch (error) {
-            console.log('get live data error')
+            console.log('get live data error' + error.message)
         }
     }
 
@@ -212,6 +207,7 @@ module.exports = async (io) => {
             data[i].Id = data[i].Id.replace(":", "0");
             if (data[i].Markets.length > 0) {
                 await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
+                await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: data[i].Id }, { our_event_id: data[i].our_event_id })
             } else if (data[i].optionMarkets.length > 0) {
                 let markets = []
                 for (var j in data[i].optionMarkets) {
@@ -239,6 +235,7 @@ module.exports = async (io) => {
                 }
                 data[i].Markets = markets
                 await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
+                await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: data[i].Id }, { our_event_id: data[i].our_event_id })
             } else {
                 await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id })
             }
@@ -395,7 +392,6 @@ module.exports = async (io) => {
     }
     initial()
 
-
     setInterval(async function () {
         console.log('refresh live macth')
         await liveMatchBwin()
@@ -405,7 +401,7 @@ module.exports = async (io) => {
         console.log("refresh premacth");
         await preMatchBwin()
         await removeOldMatchs()
-    }, 1000 * 60 * 15);
+    }, 1000 * 60 * 20);
 
     //Socket connnect part
     io.on("connection", async (socket) => {
