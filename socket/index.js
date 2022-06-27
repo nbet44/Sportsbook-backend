@@ -18,8 +18,81 @@ var liveTeamNameData = "";
 var onlineUsers = {}
 
 module.exports = async (io) => {
+    const get3way = (h_score, a_score, oddType) => {
+        if (h_score == a_score && oddType === "Draw") return "Win"
+        if (h_score > a_score && oddType === "1") return "Win"
+        if (h_score < a_score && oddType === "2") return "Win"
+        else return "Lost"
+    }
+
+    const getDoubleChance = (h_score, a_score, oddType) => {
+        if ((h_score > a_score || h_score == a_score) && oddType === "1") return "Win"
+        if ((h_score < a_score || h_score == a_score) && oddType === "2") return "Win"
+        if (h_score != a_score && oddType === "both") return "Win"
+        else return "Lost"
+    }
+
+    const getOddEven = (h_score, a_score, oddType) => {
+        let flag = (h_score + a_score) % 2
+        if (flag == 1 && oddType == 'Odd') return "Win"
+        if (flag == 0 && oddType == 'Even') return "Win"
+        else return "Lost"
+    }
+
+    const getBTTSAndEitherTeamWin = (h_score, a_score, oddType) => {
+        if (h_score > 0 && a_score > 0 && h_score != a_score && oddType == "Yes") return "Win"
+        if (h_score == 0 && a_score == 0 && oddType == "No") return "Win"
+        else "Lost"
+    }
+
+    const getBTTS = (h_score, a_score, oddType) => {
+        if (h_score > 0 && a_score > 0 && oddType == "Yes") return "Win"
+        if (h_score == 0 && a_score == 0 && oddType == "No") return "Win"
+        else "Lost"
+    }
+
+    ///// not compleat
+    const BTTSAndOverUnder = (h_score, a_score, oddType, name) => {
+        if (oddType == Over) {
+            const values = name.split("Yes and over ")
+            team = values[1].split(" goals")[0]
+        }
+
+        if (h_score > 0 && a_score > 0) {
+            let home = values[0].replace(type + " ", "")
+            let away = values[1]
+
+            if (type == "Over") {
+                if (h_score > Number(home) && a_score > Number(away)) return "Win"
+                else return "Lost"
+            }
+            if (type == "Under") {
+                if (h_score < Number(home) && a_score < Number(away)) return "Win"
+                else return "Lost"
+            }
+        } else return "Lost"
+    }
+    ///// not compleat
+
+    const getOverUnder = (h_score, a_score, oddType, name) => {
+        let values = name.split(",")
+        let home = values[0].replace(oddType + " ", "")
+        let away = values[1]
+
+        if (type == "Over") {
+            if (h_score > Number(home) && a_score > Number(away)) return "Win"
+            else return "Lost"
+        }
+        if (type == "Under") {
+            if (h_score < Number(home) && a_score < Number(away)) return "Win"
+            else return "Lost"
+        }
+    }
+
+
     const setScoreFinished = async () => {
         var data = await baseController.Bfind(bwinEventModel, { 'Scoreboard.period': 'Finished' })
+        console.log(data, 'this is finished match data')
         for (var i in data) {
             let config = {
                 method: 'get',
@@ -27,29 +100,39 @@ module.exports = async (io) => {
             };
             var response = await axios(config);
             if (response.data.results.length > 0 && response.data.success) {
-                var result = response.data.results[0]
-                var scores = result.scores && result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] ? result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] : "";
-                if (data[i].SportId === 4 || data[i].SportId === 12 || data[i].SportId === 16) {
-                    var index = scores && scores.home < scores.away ? 2 : 0;
+                if (data[i].SportId === 5) {
+                    var result = response.data.results[0]
+                    var scores = result.ss
+
                 } else {
-                    var index = scores && scores.home < scores.away ? 1 : 0;
-                }
-                var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, isMain: true, index: index })
-                var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id })
-                if (isCheckHistory.length > 0) {
-                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id }, { result: scores[0] + "-" + scores[1], status: "lose" })
-                }
-                for (var i in history) {
-                    var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
-                    if (userData) {
-                        await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * 1) } })
-                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * -1) } })
+                    var result = response.data.results[0]
+                    var scores = result.scores && result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] ? result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] : "";
+                    console.log(scores)
+                    if (data[i].SportId === 4 || data[i].SportId === 12 || data[i].SportId === 16) {
+                        var index = scores && scores.home < scores.away ? 2 : 0;
+                    } else {
+                        var index = scores && scores.home < scores.away ? 1 : 0;
+                    }
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, isMain: true, index: index })
+                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id })
+                    if (isCheckHistory.length > 0) {
+                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id }, { result: scores[0] + "-" + scores[1], status: "lose" })
+                    }
+                    for (var i in history) {
+                        var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
+                        if (userData) {
+                            await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * 1) } })
+                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * -1) } })
+                        }
+                    }
+                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index })
+                    if (isCheckHistory.length > 0) {
+                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index }, { result: scores[0] + "-" + scores[1], status: "win" })
                     }
                 }
-                var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index })
-                if (isCheckHistory.length > 0) {
-                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index }, { result: scores[0] + "-" + scores[1], status: "win" })
-                }
+
+                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result
@@ -174,12 +257,19 @@ module.exports = async (io) => {
                             saveData.type = "inplay";
                             saveData.Id = saveData.Id.replace(":", "0");
                             await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
-                            var isCheck = await baseController.BfindOneAndUpdate(
-                                bwinInPlayModel,
-                                { Id: saveData.Id },
-                                saveData
-                            );
-                            tempEventIds += saveData.Id
+                            if (data[j].Scoreboard.period == 'Finished') {
+                                var isFinish = await baseController.BfindOne(bwinInPlayModel, { Id: saveData.Id })
+                                if (isFinish) {
+                                    var isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData
+                                    );
+                                }
+                            } else {
+                                var isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData);
+                            }
+                            let isThere = await baseController.BfindOne(bwinEventModel, { Id: saveData.Id })
+                            if (isThere) {
+                                tempEventIds += saveData.Id
+                            }
                             if (!isCheck) {
                                 console.log("---Didn't save this match on Inplay : " + saveData.Id + "---");
                             }

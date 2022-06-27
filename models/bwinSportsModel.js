@@ -68,6 +68,9 @@ const bwinHistoryModel = () => {
         odds: { type: String },
         betId: { type: String },
         type: { type: String },
+        marketType: { type: String },
+        period: { type: String },
+        team: { type: String },
         status: { type: String, default: "pending" },
         result: { type: String },
         created: { type: Date, default: Date.now }
