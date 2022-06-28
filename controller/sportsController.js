@@ -598,7 +598,6 @@ exports.userBetAction = async (req, res, next) => {
 
 exports.getLiveAction = async (req, res, next) => {
     var data = req.body;
-    console.log(data.SportId + " here is live endpoint")
     var leagueData = {};
     var eventData = {};
     var firstDate = await baseController.get_stand_date_first(Date.now())
@@ -653,7 +652,6 @@ exports.getLiveAction = async (req, res, next) => {
     //         eventIds = ""
     //     }
     // }
-    // console.log(eventData)
     console.log(Object.keys(leagueData).length, Object.keys(eventData).length)
     return res.json({ status: 200, data: { leagueData, eventData } });
 }
