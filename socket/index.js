@@ -625,10 +625,10 @@ module.exports = async (io) => {
         console.log('live')
         await liveMatchBwin()
     }, 1000 * 10)
-    await removeOldMatchs()
 
     setInterval(async function () {
         console.log("refresh premacth");
+        await removeOldMatchs()
         await preMatchBwin()
     }, 1000 * 60 * 5);
 
