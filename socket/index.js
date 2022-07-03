@@ -286,12 +286,9 @@ module.exports = async (io) => {
             if (agentData[i].weeklyCreditResetState && agentData[i].weeklyCreditResetState.value === "true") {
                 var autoWeeklyCredit = agentData[i].autoWeeklyCredit
                 if (todayDay === parseInt(agentData[i].weeklyCreditResetDay.value)) {
-                    console.log("--- match weekly credit day ---");
                     if (registeredHours === new Date().getHours()) {
-                        console.log("--- match weekly credit hour ---");
                         var parentData = await baseController.BfindOne(userModel, { _id: agentData[i].pid });
                         if (parseInt(parentData.balance) < parseInt(autoWeeklyCredit)) {
-                            console.log("--- parent balance isn't enough for auto weekly credit ---")
                             return false;
                         }
                         await baseController.BfindOneAndUpdate(userModel, { _id: agentData[i]._id }, { $inc: { 'balance': (Math.abs(parseInt(autoWeeklyCredit)) * 1) } });
@@ -548,14 +545,11 @@ module.exports = async (io) => {
                     // saveData.Id = saveData.Id.replace(":", "0");
                     saveData.type = "prematch";
                     if (saveData.Markets && saveData.Markets.length > 0) {
-                        var isCheck = await baseController.BfindOneAndUpdate(
+                        await baseController.BfindOneAndUpdate(
                             bwinPrematchModel,
                             { Id: saveData.Id },
                             saveData
                         );
-                        if (!isCheck) {
-                            // console.log("---" + saveData.Id + "---");
-                        }
                     } else if (saveData.optionMarkets.length > 0) {
                         let markets = []
                         for (var j in saveData.optionMarkets) {

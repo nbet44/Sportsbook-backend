@@ -2,9 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "ok",
-  "main": "index.js",
+  "main": "nbet44.js",
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "nodemon nbet44.js",
     "betsapi": "nodemon betsapi.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
