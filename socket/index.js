@@ -117,115 +117,120 @@ module.exports = async (io) => {
             };
             var response = await axios(config);
             if (response.data.results.length > 0 && response.data.success) {
-                if (data[i].SportId === 4) {
-                    var result = response.data.results[0]
+                var result = response.data.results[0]
+                if (data[i].SportId == 4) {
                     var scores = result.scores && Object.keys(result.scores).length > 0 ? result.scores : null
-                    if (scores) {
-                        var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, isMain: true })
-                        var result = ""
-                        var home = scores['2'].home
-                        var away = scores['2'].away
-                        var home1 = scores['1'].home
-                        var away1 = scores['1'].away
-                        var home2 = Nmber(scores['2'].home) - Number(scores['1'].home)
-                        var away2 = Nmber(scores['2'].away) - Number(scores['1'].away)
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
 
-                        switch (history.marketType) {
-                            case "3way":
-                                if (history.period == "RegularTime") result = await get3way(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await get3way(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await get3way(home2, away2, history.team)
-                                break;
-                            case "BTTS":
-                                if (history.period == "RegularTime") result = await getBTTS(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getBTTS(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getBTTS(home2, away2, history.team)
-                                break;
-                            case "DoubleChance":
-                                if (history.period == "RegularTime") result = await getDoubleChance(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getDoubleChance(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getDoubleChance(home2, away2, history.team)
-                                break;
-                            case "Odd/Even":
-                                if (history.period == "RegularTime") result = await getOddEven(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getOddEven(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getOddEven(home2, away2, history.team)
-                                break;
-                            case "Over/Under":
-                                if (history.period == "RegularTime") result = await getOverUnder(home, away, history.team, history.name)
-                                if (history.period == "FirstHalf") result = await getOverUnder(home1, away1, history.team, history.name)
-                                if (history.period == "SecondHalf") result = await getOverUnder(home2, away2, history.team, history.name)
-                                break;
-                            case "BTTSAndEitherTeamToWin":
-                                if (history.period == "RegularTime") result = await getBTTSAndEitherTeamWin(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getBTTSAndEitherTeamWin(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getBTTSAndEitherTeamWin(home2, away2, history.team)
-                                break;
-                            case "BTTSAndOver/Under":
-                                if (history.period == "RegularTime") result = await BTTSAndOverUnder(home, away, history.team, history.name)
-                                if (history.period == "FirstHalf") result = await BTTSAndOverUnder(home1, away1, history.team, history.name)
-                                if (history.period == "SecondHalf") result = await BTTSAndOverUnder(home2, away2, history.team, history.name)
-                                break;
-                            case "CorrectScore":
-                                if (history.period == "RegularTime") result = await getCorrectScore(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getCorrectScore(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getCorrectScore(home2, away2, history.team)
-                                break;
-                            case "MultipleCorrectScore":
-                                if (history.period == "RegularTime") result = await getMultipleCorrectScore(home, away, history.team)
-                                if (history.period == "FirstHalf") result = await getMultipleCorrectScore(home1, away1, history.team)
-                                if (history.period == "SecondHalf") result = await getMultipleCorrectScore(home2, away2, history.team)
-                                break;
-                            default:
-                                result = "Cancel"
-                                break;
-                        }
+                    for (let j in history) {
+                        if (scores) {
+                            var result = ""
+                            var home = Number(scores['2'].home)
+                            var away = Number(scores['2'].away)
+                            var home1 = Number(scores['1'].home)
+                            var away1 = Number(scores['1'].away)
+                            var home2 = Number(scores['2'].home) - Number(scores['1'].home)
+                            var away2 = Number(scores['2'].away) - Number(scores['1'].away)
 
-                        var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
-                        if (userData) {
-                            if (history.type == "single") {
-                                if (result == 'Win') {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "win" })
-                                    await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * 1) } })
-                                    await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * -1) } })
-                                } else if (result == "Lost") {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "lose" })
-                                } else if (result == "Cancel") {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "refun" })
-                                    await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount)) * -1) } })
-                                    await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount)) * 1) } })
-                                }
-                            } else {
-                                if (result == 'Win') {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "win" })
-                                } else if (result == "Lost") {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "lose" })
-                                } else if (result == "Cancel") {
-                                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, }, { result: scores[0] + "-" + scores[1], status: "refun" })
-                                }
-                                let oneBet = baseController.BfindOne(bwinHistoryModel, { matchId: data[i].id })
-                                let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
-                                let flag = true
-                                let winCount = 0, winOdds = 1
-                                for (let j in mixBets) {
-                                    if (mixBets[j].status == 'pendding') {
-                                        flag = false
-                                        if (mixBets[j].status == 'win') {
-                                            winCount++
+                            switch (history[j].marketType) {
+                                case "3way":
+                                    if (history[j].period == "RegularTime") result = await get3way(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await get3way(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await get3way(home2, away2, history[j].team)
+                                    break;
+                                case "BTTS":
+                                    if (history[j].period == "RegularTime") result = await getBTTS(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getBTTS(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getBTTS(home2, away2, history[j].team)
+                                    break;
+                                case "DoubleChance":
+                                    if (history[j].period == "RegularTime") result = await getDoubleChance(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getDoubleChance(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getDoubleChance(home2, away2, history[j].team)
+                                    break;
+                                case "Odd/Even":
+                                    if (history[j].period == "RegularTime") result = await getOddEven(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getOddEven(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getOddEven(home2, away2, history[j].team)
+                                    break;
+                                case "Over/Under":
+                                    if (history[j].period == "RegularTime") result = await getOverUnder(home, away, history[j].team, history.name)
+                                    if (history[j].period == "FirstHalf") result = await getOverUnder(home1, away1, history[j].team, history.name)
+                                    if (history[j].period == "SecondHalf") result = await getOverUnder(home2, away2, history[j].team, history.name)
+                                    break;
+                                case "BTTSAndEitherTeamToWin":
+                                    if (history[j].period == "RegularTime") result = await getBTTSAndEitherTeamWin(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getBTTSAndEitherTeamWin(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getBTTSAndEitherTeamWin(home2, away2, history[j].team)
+                                    break;
+                                case "BTTSAndOver/Under":
+                                    if (history[j].period == "RegularTime") result = await BTTSAndOverUnder(home, away, history[j].team, history.name)
+                                    if (history[j].period == "FirstHalf") result = await BTTSAndOverUnder(home1, away1, history[j].team, history.name)
+                                    if (history[j].period == "SecondHalf") result = await BTTSAndOverUnder(home2, away2, history[j].team, history.name)
+                                    break;
+                                case "CorrectScore":
+                                    if (history[j].period == "RegularTime") result = await getCorrectScore(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getCorrectScore(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getCorrectScore(home2, away2, history[j].team)
+                                    break;
+                                case "MultipleCorrectScore":
+                                    if (history[j].period == "RegularTime") result = await getMultipleCorrectScore(home, away, history[j].team)
+                                    if (history[j].period == "FirstHalf") result = await getMultipleCorrectScore(home1, away1, history[j].team)
+                                    if (history[j].period == "SecondHalf") result = await getMultipleCorrectScore(home2, away2, history[j].team)
+                                    break;
+                                default:
+                                    result = "Cancel"
+                            }
+                            var userData = await baseController.BfindOne(userModel, { _id: history[j].userId })
+                            if (userData) {
+                                if (history[j].type == "single") {
+                                    if (result == 'Win') {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "win" })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * 1) } })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * -1) } })
+                                    } else if (result == "Lost") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "lose" })
+                                    } else if (result == "Cancel") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "refun" })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * -1) } })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
+                                    }
+                                } else {
+                                    if (result == 'Win') {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "win" })
+                                    } else if (result == "Lost") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "lose" })
+                                    } else if (result == "Cancel") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "refun" })
+                                    }
+                                    let oneBet = baseController.BfindOne(bwinHistoryModel, { _id: history[j]._id })
+                                    let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
+                                    let flag = true
+                                    let winCount = 0, winOdds = 1
+                                    for (let j in mixBets) {
+                                        if (mixBets[j].status == 'pendding') {
+                                            flag = false
+                                            if (mixBets[j].status == 'win') {
+                                                winCount++
+                                            }
+                                        }
+                                    }
+                                    if (flag) {
+                                        if (winCount == mixBets) {
+                                            await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * 1) } })
+                                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * -1) } })
                                         }
                                     }
                                 }
-                                if (flag) {
-                                    if (winCount == mixBets) {
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].winAmount)) * 1) } })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].winAmount)) * -1) } })
-                                    }
-                                }
                             }
+                        } else {
+                            await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: 'No result', status: "refun" })
+                            await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
+                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * -1) } })
                         }
                     }
-                }
-                else if (data[i].SportId === 5) {
+
+                } else if (data[i].SportId === 5) {
                     var result = response.data.results[0]
                     var scores = result.ss
 
@@ -237,10 +242,10 @@ module.exports = async (io) => {
                     } else {
                         var index = scores && scores.home < scores.away ? 1 : 0;
                     }
-                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, isMain: true, index: index })
-                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id })
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, index: index })
+                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id })
                     if (isCheckHistory.length > 0) {
-                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id }, { result: scores[0] + "-" + scores[1], status: "lose" })
+                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].Id }, { result: home + "-" + away, status: "lose" })
                     }
                     for (var i in history) {
                         var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
@@ -249,19 +254,19 @@ module.exports = async (io) => {
                             await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * -1) } })
                         }
                     }
-                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index })
+                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, index: index })
                     if (isCheckHistory.length > 0) {
-                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].id, isMain: true, index: index }, { result: scores[0] + "-" + scores[1], status: "win" })
+                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].Id, index: index }, { result: home + "-" + away, status: "win" })
                     }
                 }
 
-                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
-                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result
                 // }
-                // await baseController.BfindOneAndUpdate(bwinResultModel, { matchId: data[i].id, isMain: true }, saveData)
+                // await baseController.BfindOneAndUpdate(bwinResultModel, { matchId: data[i].Id, isMain: true }, saveData)
             }
         }
     }
@@ -369,9 +374,6 @@ module.exports = async (io) => {
         };
         try {
             response = await axios(request);
-            if (sport_id == 4) {
-                console.log(response.data.results)
-            }
             if (response.data.success === 1) {
                 let data = response.data.results
                 let sendEventIds = []
@@ -385,14 +387,19 @@ module.exports = async (io) => {
                             saveData.type = "inplay";
                             saveData.Id = saveData.Id.replace(":", "0");
                             await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
-                            if (data[j].Scoreboard.period == 'Finished') {
+                            if (saveData.Scoreboard.period == 'Finished') {
+
+                                console.log('-Finished-', saveData.Id)
+
                                 var isFinish = await baseController.BfindOne(bwinInPlayModel, { Id: saveData.Id })
+
                                 if (isFinish) {
-                                    isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData
-                                    );
+                                    console.log('there is in Inplay')
+                                    isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData);
                                 }
                                 let isThere = await baseController.BfindOne(bwinEventModel, { Id: saveData.Id })
                                 if (isThere) {
+                                    console.log('there is in Event', saveData.Id)
                                     tempEventIds += saveData.Id
                                 }
                             } else {
@@ -456,7 +463,10 @@ module.exports = async (io) => {
                 await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
                 await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: data[i].Id }, { our_event_id: data[i].our_event_id })
             } else {
-                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id })
+                if (data[i].Scoreboard.period == 'Finished') {
+                    await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, { "Scoreboard.period": "Finished" })
+                }
+                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id })
             }
         }
     }
@@ -544,7 +554,7 @@ module.exports = async (io) => {
                             saveData
                         );
                         if (!isCheck) {
-                            console.log("---" + saveData.Id + "---");
+                            // console.log("---" + saveData.Id + "---");
                         }
                     } else if (saveData.optionMarkets.length > 0) {
                         let markets = []
@@ -612,15 +622,15 @@ module.exports = async (io) => {
     initial()
 
     setInterval(async function () {
+        console.log('live')
         await liveMatchBwin()
-        console.log('refresh live macth')
-    }, 1000 * 30)
+    }, 1000 * 10)
+    await removeOldMatchs()
 
     setInterval(async function () {
         console.log("refresh premacth");
         await preMatchBwin()
-        await removeOldMatchs()
-    }, 1000 * 60 * 20);
+    }, 1000 * 60 * 5);
 
     //Socket connnect part
     io.on("connection", async (socket) => {

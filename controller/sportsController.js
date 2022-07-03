@@ -596,14 +596,46 @@ exports.userBetAction = async (req, res, next) => {
     res.json({ status: 200, data: { userData, result, oddData } });
 }
 
+exports.getLiveAction_ = async (req, res, next) => {
+    var data = req.body;
+    var leagueData = {};
+    var firstDate = await baseController.get_stand_date_first(Date.now())
+    var endDate = await baseController.get_stand_date_end1(Date.now())
+
+    var leagueIdArray = await bwinInPlayModel.distinct("LeagueId", { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, Date: { $gte: firstDate, $lt: endDate }, SportId: data.SportId, })
+    for (var i in leagueIdArray) {
+        var sportsData = await baseController.Bfind(bwinInPlayModel, { LeagueId: leagueIdArray[i] });
+        for (var j in sportsData) {
+            let market = await bwinEventModel.findOne({ Id: sportsData[j].Id }, { Markets: "$Markets" })
+            if (market) {
+                let Markets = []
+                for (let k in market.Markets) {
+                    if (market.Markets[k].MarketType &&
+                        (market.Markets[k].MarketType === "3way" ||
+                            market.Markets[k].MarketType === "Handicap" ||
+                            market.Markets[k].MarketType === "Over/Under")
+                    ) {
+                        Markets.push(market.Markets[k])
+                    }
+                }
+                sportsData[j]["_doc"]["market"] = Markets
+            }
+        }
+        if (sportsData.length > 0) {
+            leagueData[leagueIdArray[i]] = sportsData;
+        }
+    }
+    res.json({ status: 200, data: leagueData })
+}
 exports.getLiveAction = async (req, res, next) => {
     var data = req.body;
     var leagueData = {};
     var eventData = {};
-    var firstDate = await baseController.get_stand_date_first(Date.now())
+    var firstDate = await baseController.get_stand_date_first(Date.now('2022-07-03'))
     var endDate = await baseController.get_stand_date_end1(Date.now())
+    // Date: { $gte: firstDate, $lt: endDate }
     var apiRequestData = [];
-    var sportsData = await baseController.Bfind(bwinInPlayModel, { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, SportId: data.SportId, Date: { $gte: firstDate, $lt: endDate } });
+    var sportsData = await baseController.Bfind(bwinInPlayModel, { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, SportId: data.SportId, });
     for (var i = 0; i < sportsData.length; i++) {
         var eachEvent = await baseController.BfindOne(bwinEventModel, { Id: sportsData[i].Id })
         if (eachEvent && eachEvent.Markets && eachEvent.Markets.length > 0) {
@@ -612,6 +644,8 @@ exports.getLiveAction = async (req, res, next) => {
             apiRequestData.push(sportsData[i])
         }
     }
+    console.log(eventData)
+
     // var eventIds = ""
     // for (var i = 0; i < apiRequestData.length; i++) {
     //     eventIds = eventIds + apiRequestData[i]["Id"] + ",";
@@ -623,7 +657,8 @@ exports.getLiveAction = async (req, res, next) => {
     //         eventIds = ""
     //     }
     // }
-    var leagueIdArray = await bwinInPlayModel.distinct("LeagueId", { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, SportId: data.SportId, Date: { $gte: firstDate, $lt: endDate } })
+    // Date: { $gte: firstDate, $lt: endDate }
+    var leagueIdArray = await bwinInPlayModel.distinct("LeagueId", { AwayTeam: { $ne: null }, HomeTeam: { $ne: null }, SportId: data.SportId, })
     for (var i in leagueIdArray) {
         var sportsData = await baseController.Bfind(bwinInPlayModel, { LeagueId: leagueIdArray[i] });
         var filteredData = []
