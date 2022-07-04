@@ -274,6 +274,7 @@ module.exports = async (io) => {
     const removeOldMatchs = async () => {
         const currentDate = new Date(new Date().valueOf() - (1000 * 300)).toJSON()
         await setScoreFinished()
+        await finishInplay()
         // await bwinInPlayModel.deleteMany({ $or: [{ 'Scoreboard.period': 'Finished' }, { updatedAt: { $lte: currentDate } }] })
         // await bwinEventModel.deleteMany({ $or: [{ 'Scoreboard.period': 'Finished' }, { updatedAt: { $lte: currentDate } }] })
     }
@@ -365,7 +366,7 @@ module.exports = async (io) => {
     }
 
     const getLiveDataMatch = async (sport_id = 4) => {
-        request = {
+        const request = {
             method: "get",
             url: "https://api.b365api.com/v1/bwin/inplay?token=" + token + "&sport_id=" + sport_id,
         };
@@ -487,6 +488,24 @@ module.exports = async (io) => {
                     resolve([])
                 });
         })
+    }
+
+    const finishInplay = async () => {
+        const halfMatch = await baseController.Bfind(bwinInPlayModel, { "Scoreboard.period": "2H", SportId: 4 });
+        for (let i in halfMatch) {
+            if (Number(halfMatch[i].Scoreboard.timer.seconds / 60) >= 90) {
+                const requestFinish = {
+                    method: "get",
+                    url: "https://api.b365api.com/v1/bwin/result?token=" + token + "&event_id=" + halfMatch[i].Id,
+                };
+                const finishResponse = await axios(requestFinish);
+                if (finishResponse.data.success === 1 && finishResponse.data.results[0].time_status == '3') {
+                    console.log('soccer finish ' + halfMatch[i].Id)
+                    await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
+                    await baseController.BfindOneAndUpdate(bwinEventModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
+                }
+            }
+        }
     }
     //get live macth end
 
@@ -622,8 +641,8 @@ module.exports = async (io) => {
 
     setInterval(async function () {
         console.log("refresh premacth");
-        await removeOldMatchs()
         await preMatchBwin()
+        await removeOldMatchs()
     }, 1000 * 60 * 5);
 
     //Socket connnect part
