@@ -506,9 +506,9 @@ module.exports = async (io) => {
                         await baseController.BfindOneAndUpdate(bwinEventModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
                     }
                 }
-            } catch ((error) => {
-                console.log("finish inplay 2H match")
-            })
+            }
+        } catch (error) {
+            console.log("finish inplay 2H match")
         }
     }
     //get live macth end
