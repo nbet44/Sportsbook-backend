@@ -491,20 +491,24 @@ module.exports = async (io) => {
     }
 
     const finishInplay = async () => {
-        const halfMatch = await baseController.Bfind(bwinInPlayModel, { "Scoreboard.period": "2H", SportId: 4 });
-        for (let i in halfMatch) {
-            if (Number(halfMatch[i].Scoreboard.timer.seconds / 60) >= 90) {
-                const requestFinish = {
-                    method: "get",
-                    url: "https://api.b365api.com/v1/bwin/result?token=" + token + "&event_id=" + halfMatch[i].Id,
-                };
-                const finishResponse = await axios(requestFinish);
-                if (finishResponse.data.success === 1 && finishResponse.data.results[0].time_status == '3') {
-                    console.log('soccer finish ' + halfMatch[i].Id)
-                    await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
-                    await baseController.BfindOneAndUpdate(bwinEventModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
+        try {
+            const halfMatch = await baseController.Bfind(bwinInPlayModel, { "Scoreboard.period": "2H", SportId: 4 });
+            for (let i in halfMatch) {
+                if (Number(halfMatch[i].Scoreboard.timer.seconds / 60) >= 90) {
+                    const requestFinish = {
+                        method: "get",
+                        url: "https://api.b365api.com/v1/bwin/result?token=" + token + "&event_id=" + halfMatch[i].Id,
+                    };
+                    const finishResponse = await axios(requestFinish);
+                    if (finishResponse.data.success === 1 && finishResponse.data.results[0].time_status == '3') {
+                        console.log('soccer finish ' + halfMatch[i].Id)
+                        await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
+                        await baseController.BfindOneAndUpdate(bwinEventModel, { Id: halfMatch[i].Id }, { "Scoreboard.period": "Finished" });
+                    }
                 }
-            }
+            } catch ((error) => {
+                console.log("finish inplay 2H match")
+            })
         }
     }
     //get live macth end
