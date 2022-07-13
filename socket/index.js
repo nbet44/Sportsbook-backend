@@ -121,17 +121,18 @@ module.exports = async (io) => {
                 if (data[i].SportId == 4) {
                     var scores = result.scores && Object.keys(result.scores).length > 0 ? result.scores : null
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
-
+                    var result, home, away, home1, away1, home2, away2
+                    if (scores) {
+                        result = ""
+                        home = Number(scores['2'].home)
+                        away = Number(scores['2'].away)
+                        home1 = Number(scores['1'].home)
+                        away1 = Number(scores['1'].away)
+                        home2 = Number(scores['2'].home) - Number(scores['1'].home)
+                        away2 = Number(scores['2'].away) - Number(scores['1'].away)
+                    }
                     for (let j in history) {
                         if (scores) {
-                            var result = ""
-                            var home = Number(scores['2'].home)
-                            var away = Number(scores['2'].away)
-                            var home1 = Number(scores['1'].home)
-                            var away1 = Number(scores['1'].away)
-                            var home2 = Number(scores['2'].home) - Number(scores['1'].home)
-                            var away2 = Number(scores['2'].away) - Number(scores['1'].away)
-
                             switch (history[j].marketType) {
                                 case "3way":
                                     if (history[j].period == "RegularTime") result = await get3way(home, away, history[j].team)
@@ -230,10 +231,19 @@ module.exports = async (io) => {
                         }
                     }
 
-                } else if (data[i].SportId === 5) {
-                    var result = response.data.results[0]
-                    var scores = result.ss
+                } else if (data[i].SportId === 56) {
+                    var scores = result.ss ? result.ss : "";
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
+                    var home, away;
+                    if (scores) {
+                        home = Number(scores.split('-')[0])
+                        away = Number(scores.split('-')[1])
+                    }
+                    for (let j in history) {
+                        if (scores) {
 
+                        }
+                    }
                 } else {
                     var result = response.data.results[0]
                     var scores = result.scores && result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] ? result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] : "";
@@ -260,8 +270,8 @@ module.exports = async (io) => {
                     }
                 }
 
-                await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
-                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
+                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result

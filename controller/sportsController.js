@@ -202,7 +202,6 @@ exports.setLiveResultAction = async (req, res, next) => {
 exports.setResultAction = async (req, res, next) => {
     var result = [];
     var data = req.body;
-    console.log(data)
     var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data.matchId })
     if (isCheckHistory.length > 0) {
         await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data.matchId }, { result: data.result, status: "lose" })
@@ -281,7 +280,6 @@ exports.getHistoryAction = async (req, res, next) => {
             filter.status = data.filter.status
         }
     }
-    console.log(filter)
     if (data.filter && data.filter.sort === "result") {
         var history = await baseController.BfindSort(bwinHistoryModel, filter, { result: 1 })
     } else {
@@ -644,7 +642,6 @@ exports.getLiveAction = async (req, res, next) => {
             apiRequestData.push(sportsData[i])
         }
     }
-    console.log(eventData)
 
     // var eventIds = ""
     // for (var i = 0; i < apiRequestData.length; i++) {
