@@ -18,6 +18,8 @@ var liveTeamNameData = "";
 var onlineUsers = {}
 
 module.exports = async (io) => {
+
+    //Football markets
     const get3way = (h_score, a_score, oddType) => {
         if (h_score == a_score && oddType === "Draw") return "Win"
         if (h_score > a_score && oddType === "1") return "Win"
@@ -106,7 +108,227 @@ module.exports = async (io) => {
         if (flag) return "Win"
         else return "Lost"
     }
+    //Football markets
 
+    //TableTennis markets
+    const whoWin = async (score, winner) => {
+        var home = score.split('-')[0];
+        var away = score.split('-')[1];
+
+        if (Number(home) > Number(away) && winner == '1') return "Win"
+        else if (Number(home) < Number(away) && winner == '2') return "Win"
+        else return "Lost"
+    }
+
+    const setBet = async (score, value) => {
+        var home = Number(score.split('-')[0]);
+        var away = Number(score.split('-')[1]);
+        var vHome = Number(value.split('-')[0]);
+        var vAway = Number(value.split('-')[1]);
+
+        if (home == vHome && away == vAway) return "Win"
+        else return "Lost"
+    }
+
+    const totalPointHandicap = async (scores, hcp, winner) => {
+        var home = 0, away = 0;
+        for (const val in scores) {
+            home += Number(scores[val].home);
+            away += Number(scores[val].away);
+        }
+
+        var handicap = hcp.split(',')[0];
+        handicap = handicap.slice(-3);
+        handicap = Number(handicap);
+
+        if (winner == '1') {
+            if ((home + handicap) > away) return "Win";
+            else return "Lost";
+        } else if (winner == '2') {
+            if ((away + handicap) > home) return "Win";
+            else return "Lost";
+        } else {
+            return 'refun'
+        }
+    }
+
+    const whoWinSecond = async (scores, winner) => {
+        if (!scores && !scores['2']) return 'refun';
+        var home = scores['2'].home;
+        var away = scores['2'].away;
+
+        if (Number(home) > Number(away) && winner == '1') return "Win"
+        else if (Number(home) < Number(away) && winner == '2') return "Win"
+        else return "Lost"
+    }
+
+    const howPoints = async (scores, period, point, team) => {
+        var total = 0, over = 1, cPoint = 0
+        console.log(over, total, cPoint, '=========')
+
+        if (period == 'RegularTime') {
+            for (const val in scores) {
+                total += Number(scores[val][team]);
+            }
+
+            cPoint = Number(point.split(',')[0].slice(-3));
+
+            if (point.startsWith("Over")) over = 1
+            else if (point.startsWith("Under")) over = -1
+        } else {
+            if (scores[period]) {
+                total += Number(scores[period][team]);
+
+                if (point.startsWith('Exactly')) {
+                    over = 0;
+                    cPoint = Number(point.split('Exactly')[1]);
+                } else if (point.indexOf('or less') != -1) {
+                    over = -1;
+                    cPoint = Number(point.slice(0, 3));
+                } else if (point.indexOf('or more') != -1) {
+                    over = 1;
+                    cPoint = Number(point.slice(0, 3));
+                } else {
+                    return 'refun';
+                }
+            } else {
+                return 'refun';
+            }
+        }
+
+        if (over == 1) {
+            if (total >= cPoint) return 'Win';
+            else return 'Lost';
+        } else if (over == 0) {
+            if (total == cPoint) return 'Win';
+            else return 'Lost';
+        } else if (over == -1) {
+            if (total <= cPoint) return 'Win';
+            else return 'Lost';
+        }
+    }
+
+    const howPointsTotal = async (scores, period, point) => {
+        var total = 0, over = 1, cPoint = 0
+
+        if (period == 'RegularTime') {
+            for (const val in scores) {
+                total += Number(scores[val].home);
+                total += Number(scores[val].away);
+            }
+
+            cPoint = Number(point.split(',')[0].slice(-3));
+
+            if (point.startsWith("Over")) over = 1
+            else if (point.startsWith("Under")) over = -1
+        } else {
+            if (scores[period]) {
+                total += Number(scores[period].home);
+                total += Number(scores[period].away);
+
+                if (point.startsWith('Exactly')) {
+                    over = 0;
+                    cPoint = Number(point.split('Exactly')[1]);
+                } else if (point.indexOf('or less') != -1) {
+                    over = -1;
+                    cPoint = Number(point.slice(0, 3));
+                } else if (point.indexOf('or more') != -1) {
+                    over = 1;
+                    cPoint = Number(point.slice(0, 3));
+                } else {
+                    return 'refun';
+                }
+            } else {
+                return 'refun';
+            }
+        }
+        if (over == 1) {
+            if (total >= cPoint) return 'Win';
+            else return 'Lost';
+        } else if (over == 0) {
+            if (total == cPoint) return 'Win';
+            else return 'Lost';
+        } else if (over == -1) {
+            if (total <= cPoint) return 'Win';
+            else return 'Lost';
+        }
+    }
+
+    const whichTeamScoreSet = async (scores, period, name, winner) => {
+        var score = 0, goal;
+        if (!period || !scores[period]) return 'refun';
+        if (winner == '1') {
+            score = scores[period].home;
+        } else {
+            score = scores[period].away;
+        }
+        goal = name.split('Which Team/Player will score the ')[1];
+        goal = Number(goal.slice(2));
+
+        if (goal == score) return 'Win';
+        else return 'Lost';
+    }
+
+    const correctScore = async (scores, period, value) => {
+        var home = Number(scores[period].home);
+        var away = Number(scores[period].away);
+        var vHome = Number(value.split(':')[0]);
+        var vAway = Number(value.split(':')[1]);
+        if (home == vHome && away == vAway) return "Win"
+        else return "Lost"
+    }
+
+    const numberOfPoints = async (scores, period, point) => {
+        var total = 0, over = 1, cPoint = 0
+
+        if (scores[period]) {
+            total += Number(scores[period].home);
+            total += Number(scores[period].away);
+
+            if (point.startsWith("Over")) over = 1
+            else if (point.startsWith("Under")) over = -1
+        } else {
+            return 'refun';
+        }
+
+        if (over == 1) {
+            if (total >= cPoint) return 'Win';
+            else return 'Lost';
+        } else if (over == -1) {
+            if (total <= cPoint) return 'Win';
+            else return 'Lost';
+        }
+    }
+
+    const setWinner = async (scores, period, winner) => {
+        var home = Number(scores[period].home);
+        var away = Number(scores[period].away);
+
+        if (home > away && winner == '1') return "Win";
+        else if (home < away && winner == '2') return "Win";
+        else return 'Lost';
+    }
+
+    const setHandicap = (scores, period, hcp, winner) => {
+        var home = 0, away = 0;
+        home += Number(scores[period].home);
+        away += Number(scores[period].away);
+
+        var handicap = hcp.split(',')[0];
+        handicap = handicap.slice(-3);
+        handicap = Number(handicap);
+
+        if (winner == '1') {
+            if ((home + handicap) > away) return "Win";
+            else return "Lost";
+        } else if (winner == '2') {
+            if ((away + handicap) > home) return "Win";
+            else return "Lost";
+        } else {
+            return 'refun'
+        }
+    }
+    //TableTennis markets
 
     const setScoreFinished = async () => {
         var data = await baseController.Bfind(bwinEventModel, { 'Scoreboard.period': 'Finished' })
@@ -117,9 +339,10 @@ module.exports = async (io) => {
             };
             var response = await axios(config);
             if (response.data.results.length > 0 && response.data.success) {
-                var result = response.data.results[0]
-                if (data[i].SportId == 4) {
-                    var scores = result.scores && Object.keys(result.scores).length > 0 ? result.scores : null
+                var rdata = response.data.results[0]
+
+                if (data[i].SportId == 4) {                                                                                     //Football
+                    var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
                     var result, home, away, home1, away1, home2, away2
                     if (scores) {
@@ -133,51 +356,45 @@ module.exports = async (io) => {
                     }
                     for (let j in history) {
                         if (scores) {
+                            let pHome, pAway;
+                            if (history[j].period == "RegularTime") {
+                                pHome = home;
+                                pAway = away;
+                            } else if (history[j].period == "FirstHalf") {
+                                pHome = home1;
+                                pAway = away1;
+                            } else if (history[j].period == "SecondHalf") {
+                                pHome = home2;
+                                pAway = away2;
+                            }
+
                             switch (history[j].marketType) {
                                 case "3way":
-                                    if (history[j].period == "RegularTime") result = await get3way(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await get3way(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await get3way(home2, away2, history[j].team)
+                                    result = await get3way(pHome, pAway, history[j].team)
                                     break;
                                 case "BTTS":
-                                    if (history[j].period == "RegularTime") result = await getBTTS(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getBTTS(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getBTTS(home2, away2, history[j].team)
+                                    result = await getBTTS(pHome, pAway, history[j].team)
                                     break;
                                 case "DoubleChance":
-                                    if (history[j].period == "RegularTime") result = await getDoubleChance(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getDoubleChance(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getDoubleChance(home2, away2, history[j].team)
+                                    result = await getDoubleChance(pHome, pAway, history[j].team)
                                     break;
                                 case "Odd/Even":
-                                    if (history[j].period == "RegularTime") result = await getOddEven(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getOddEven(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getOddEven(home2, away2, history[j].team)
+                                    result = await getOddEven(pHome, pAway, history[j].team)
                                     break;
                                 case "Over/Under":
-                                    if (history[j].period == "RegularTime") result = await getOverUnder(home, away, history[j].team, history.name)
-                                    if (history[j].period == "FirstHalf") result = await getOverUnder(home1, away1, history[j].team, history.name)
-                                    if (history[j].period == "SecondHalf") result = await getOverUnder(home2, away2, history[j].team, history.name)
+                                    result = await getOverUnder(pHome, pAway, history[j].team, history.name)
                                     break;
                                 case "BTTSAndEitherTeamToWin":
-                                    if (history[j].period == "RegularTime") result = await getBTTSAndEitherTeamWin(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getBTTSAndEitherTeamWin(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getBTTSAndEitherTeamWin(home2, away2, history[j].team)
+                                    result = await getBTTSAndEitherTeamWin(pHome, pAway, history[j].team)
                                     break;
                                 case "BTTSAndOver/Under":
-                                    if (history[j].period == "RegularTime") result = await BTTSAndOverUnder(home, away, history[j].team, history.name)
-                                    if (history[j].period == "FirstHalf") result = await BTTSAndOverUnder(home1, away1, history[j].team, history.name)
-                                    if (history[j].period == "SecondHalf") result = await BTTSAndOverUnder(home2, away2, history[j].team, history.name)
+                                    result = await BTTSAndOverUnder(pHome, pAway, history[j].team, history.name)
                                     break;
                                 case "CorrectScore":
-                                    if (history[j].period == "RegularTime") result = await getCorrectScore(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getCorrectScore(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getCorrectScore(home2, away2, history[j].team)
+                                    result = await getCorrectScore(pHome, pAway, history[j].team)
                                     break;
                                 case "MultipleCorrectScore":
-                                    if (history[j].period == "RegularTime") result = await getMultipleCorrectScore(home, away, history[j].team)
-                                    if (history[j].period == "FirstHalf") result = await getMultipleCorrectScore(home1, away1, history[j].team)
-                                    if (history[j].period == "SecondHalf") result = await getMultipleCorrectScore(home2, away2, history[j].team)
+                                    result = await getMultipleCorrectScore(pHome, pAway, history[j].team)
                                     break;
                                 default:
                                     result = "Cancel"
@@ -231,7 +448,94 @@ module.exports = async (io) => {
                         }
                     }
 
-                } else if (data[i].SportId === 56) {
+                } else if (data[i].SportId == 56) {                                                                             //Table Tennis
+                    var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null;
+                    var score = rdata.ss;
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
+console.log(history)
+                    if (scores && score) {
+                        for (let j in history) {
+
+                            if (history[j].marketType == "2Way - Who will win?") {
+                                result = await whoWin(score, history[j].team)
+                            } else if (history[j].marketType == "Set Bet") {
+                                result = await setBet(score, history[j].team)
+                            } else if (history[j].marketType == "Total Points Handicap") {
+                                result = await totalPointHandicap(scores, history[j].name, history[j].team)
+                            } else if (history[j].marketType == "Who will win second set?") {
+                                result = await whoWinSecond(scores, history[j].team)
+                            } else if (history[j].marketType.startsWith("How many points will player/team 1 score in the")) {
+                                result = await howPoints(scores, history[j].period, history[j].team, 'home')
+                                console.log(result, '++++++++++++++')
+                            } else if (history[j].marketType.startsWith("How many points will player/team 2 score in the")) {
+                                result = await howPoints(scores, history[j].period, history[j].team, 'away')
+                            } else if (history[j].marketType.startsWith('Which Team/Player will score the ') && history[j].marketType.search('point in the')) {
+                                result = await whichTeamScoreSet(scores, history[j].period, history[j].name, history[j].team)
+                            } else if (history[j].marketType.startsWith('First team/player to reach ') && history[j].marketType.search('points')) {
+                                result = 'refun'
+                            } else if (history[j].marketType.startsWith('Correct Score')) {
+                                result = await correctScore(scores, history[j].period, history[j].team)
+                            } else if (history[j].marketType.startsWith("How many points will be scored in the")) {
+                                result = await howPointsTotal(scores, history[j].period, history[j].team)
+                            } else if (history[j].marketType.startsWith("Number of points scored in")) {
+                                result = await numberOfPoints(scores, history[j].period, history[j].team)
+                            } else if (history[j].marketType.startsWith('Winning Margin Set ')) {
+                                result = 'refun'
+                            } else if ((history[j].marketType.startsWith('Set') && history[j].marketType.search('Winner') >= 6)) {
+                                result = await setWinner(scores, history[j].period, history[j].team)
+                            } else if (history[j].marketType.startsWith('Which team/player will be the first to reach ')) {
+                                result = 'refun'
+                            } else if (history[j].marketType.startsWith('Who will be the first team/player to reach ')) {
+                                result = 'refun'
+                            } else if (history[j].marketType.indexOf('set handicap')) {
+                                result = await setHandicap(scores, history[j].period, history[j].name, history[j].team)
+                            }
+
+                            var userData = await baseController.BfindOne(userModel, { _id: history[j].userId })
+                            if (userData) {
+                                if (history[j].type == "single") {
+                                    if (result == 'Win') {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "win" })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * 1) } })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * -1) } })
+                                    } else if (result == "Lost") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "lose" })
+                                    } else if (result == "Cancel") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "refun" })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * -1) } })
+                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
+                                    }
+                                } else {
+                                    if (result == 'Win') {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "win" })
+                                    } else if (result == "Lost") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "lose" })
+                                    } else if (result == "Cancel") {
+                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "refun" })
+                                    }
+                                    let oneBet = baseController.BfindOne(bwinHistoryModel, { _id: history[j]._id })
+                                    let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
+                                    let flag = true
+                                    let winCount = 0, winOdds = 1
+                                    for (let j in mixBets) {
+                                        if (mixBets[j].status == 'pendding') {
+                                            flag = false
+                                            if (mixBets[j].status == 'win') {
+                                                winCount++
+                                            }
+                                        }
+                                    }
+                                    if (flag) {
+                                        if (winCount == mixBets) {
+                                            await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * 1) } })
+                                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * -1) } })
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (data[i].SportId == 7) {                                                                              //Basketball
                     var scores = result.ss ? result.ss : "";
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
                     var home, away;
@@ -426,7 +730,7 @@ module.exports = async (io) => {
                 }
                 let funcs = []
                 for (let i in sendEventIds) {
-                    funcs.push(getRealtimeLiveMarket(sendEventIds[i]))
+                    funcs.push(getRealtimeLiveMarket(sendEventIds[i], sport_id))
                 }
                 Promise.all(funcs)
             }
@@ -435,10 +739,11 @@ module.exports = async (io) => {
         }
     }
 
-    const getRealtimeLiveMarket = async (ids) => {
+    const getRealtimeLiveMarket = async (ids, sport_id) => {
         let data = await getMarketsById(ids)
         for (let i in data) {
             data[i].Id = data[i].Id.replace(":", "0");
+            data[i].SportId = sport_id;
             if (data[i].Markets.length > 0) {
                 await baseController.BfindOneAndUpdate(bwinEventModel, { Id: data[i].Id }, data[i])
                 await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: data[i].Id }, { our_event_id: data[i].our_event_id })
