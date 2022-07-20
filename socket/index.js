@@ -164,33 +164,33 @@ module.exports = async (io) => {
 
     const howPoints = async (scores, period, point, team) => {
         var total = 0, over = 1, cPoint = 0
-        console.log(over, total, cPoint, '=========')
+
+        if (point.startsWith("Over")) {
+            over = 1;
+            cPoint = Number(point.split(',')[0].slice(-3));
+        } else if (point.startsWith("Under")) {
+            over = -1;
+            cPoint = Number(point.split(',')[0].slice(-3));
+        } else if (point.startsWith('Exactly')) {
+            over = 0;
+            cPoint = Number(point.split('Exactly')[1]);
+        } else if (point.indexOf('or less') != -1) {
+            over = -1;
+            cPoint = Number(point.slice(0, 3));
+        } else if (point.indexOf('or more') != -1) {
+            over = 1;
+            cPoint = Number(point.slice(0, 3));
+        } else {
+            return 'refun';
+        }
 
         if (period == 'RegularTime') {
             for (const val in scores) {
                 total += Number(scores[val][team]);
             }
-
-            cPoint = Number(point.split(',')[0].slice(-3));
-
-            if (point.startsWith("Over")) over = 1
-            else if (point.startsWith("Under")) over = -1
         } else {
             if (scores[period]) {
                 total += Number(scores[period][team]);
-
-                if (point.startsWith('Exactly')) {
-                    over = 0;
-                    cPoint = Number(point.split('Exactly')[1]);
-                } else if (point.indexOf('or less') != -1) {
-                    over = -1;
-                    cPoint = Number(point.slice(0, 3));
-                } else if (point.indexOf('or more') != -1) {
-                    over = 1;
-                    cPoint = Number(point.slice(0, 3));
-                } else {
-                    return 'refun';
-                }
             } else {
                 return 'refun';
             }
@@ -210,34 +210,34 @@ module.exports = async (io) => {
 
     const howPointsTotal = async (scores, period, point) => {
         var total = 0, over = 1, cPoint = 0
+        if (point.startsWith("Over")) {
+            over = 1;
+            cPoint = Number(point.split(',')[0].slice(-3));
+        } else if (point.startsWith("Under")) {
+            over = -1;
+            cPoint = Number(point.split(',')[0].slice(-3));
+        } else if (point.startsWith('Exactly')) {
+            over = 0;
+            cPoint = Number(point.split('Exactly')[1]);
+        } else if (point.indexOf('or less') != -1) {
+            over = -1;
+            cPoint = Number(point.slice(0, 3));
+        } else if (point.indexOf('or more') != -1) {
+            over = 1;
+            cPoint = Number(point.slice(0, 3));
+        } else {
+            return 'refun';
+        }
 
         if (period == 'RegularTime') {
             for (const val in scores) {
                 total += Number(scores[val].home);
                 total += Number(scores[val].away);
             }
-
-            cPoint = Number(point.split(',')[0].slice(-3));
-
-            if (point.startsWith("Over")) over = 1
-            else if (point.startsWith("Under")) over = -1
         } else {
             if (scores[period]) {
                 total += Number(scores[period].home);
                 total += Number(scores[period].away);
-
-                if (point.startsWith('Exactly')) {
-                    over = 0;
-                    cPoint = Number(point.split('Exactly')[1]);
-                } else if (point.indexOf('or less') != -1) {
-                    over = -1;
-                    cPoint = Number(point.slice(0, 3));
-                } else if (point.indexOf('or more') != -1) {
-                    over = 1;
-                    cPoint = Number(point.slice(0, 3));
-                } else {
-                    return 'refun';
-                }
             } else {
                 return 'refun';
             }
@@ -309,7 +309,7 @@ module.exports = async (io) => {
         else return 'Lost';
     }
 
-    const setHandicap = (scores, period, hcp, winner) => {
+    const setHandicap = async (scores, period, hcp, winner) => {
         var home = 0, away = 0;
         home += Number(scores[period].home);
         away += Number(scores[period].away);
@@ -329,6 +329,157 @@ module.exports = async (io) => {
         }
     }
     //TableTennis markets
+
+    //Basketball markets
+    const getTotal = async (score, val) => {
+        let total = Number(score.split('-')[0]) + Number(score.split('-')[1])
+        let ou = true
+        if (val.startsWith("Over")) ou = true
+        else if (val.startsWith("Under")) ou = false
+        val = Number(val.split(',')[0].slice(-3))
+
+        if (ou) {
+            if (total > val) return 'Win'
+            else return 'Lost'
+        } else {
+            if (total < val) return 'Win'
+            else return 'Lost'
+        }
+    }
+
+    const getQuarterTotal = async (scores, period, val) => {
+        if (!scores[period]) return 'refun'
+        let total = Number(scores[period].home) + Number(scores[period].away)
+        let ou = true
+        if (val.startsWith("Over")) ou = true
+        else if (val.startsWith("Under")) ou = false
+        val = Number(val.split(',')[0].slice(-3))
+
+        if (ou) {
+            if (total > val) return 'Win'
+            else return 'Lost'
+        } else {
+            if (total < val) return 'Win'
+            else return 'Lost'
+        }
+    }
+
+    const getMoneyLine = async (score, team) => {
+        const home = Number(score.split('-')[0])
+        const away = Number(score.split('-')[1])
+
+        if (home > away && team == '1') return 'Win'
+        else if (away > home && team == '2') return 'Win'
+        else return 'Lost'
+    }
+
+    const getFstMoneyLine = async (scores, team) => {
+        const home = Number(scores['1'].home)
+        const away = Number(scores['1'].away)
+
+        if (home > away && team == '1') return 'Win'
+        else if (away > home && team == '2') return 'Win'
+        else return 'Lost'
+    }
+
+    const getBasketHdp = async (score, hdp, team, period) => {
+        let home, away, pre;
+        if (period == 'regularTime') {
+            home = Number(score.split('-')[0])
+            away = Number(score.split('-')[1])
+        } else if (period == '1st') {
+            home = Number(score['1'].home)
+            away = Number(score['1'].away)
+        }
+        pre = Number(hdp.split(',')[0].slice(-2))
+
+        if (team == '1') {
+            if ((home + pre) > away) return 'Win'
+            else return 'Lost'
+        } else if (team == '2') {
+            if ((away + pre) > home) return 'Win'
+            else return 'Lost'
+        }
+    }
+
+    const firstOddEven = (scores, val) => {
+        let total = Number(scores['1'].home) + Number(scores['1'].away)
+        if ((total % 2 == 0) && val == 'Even') return 'Win'
+        else if ((total % 2 == 1) && val == 'Odd') return 'Win'
+        else return 'Lost'
+    }
+
+    const getBasketOddEven = (scores, val) => {
+        let total = Number(scores.split('-')[0]) + Number(scores.split('-')[1])
+        if ((total % 2 == 0) && val == 'Even') return 'Win'
+        else if ((total % 2 == 1) && val == 'Odd') return 'Win'
+        else return 'Lost'
+    }
+
+    const getThreeWay = async (score, team, period) => {
+        let home, away
+        if (period == 'regularTime') {
+            home = Number(score.split('-')[0])
+            away = Number(score.split('-')[1])
+        } else {
+            home = Number(scores['1'].home)
+            away = Number(scores['1'].away)
+        }
+
+        if (home > away && team == '1') return 'Win'
+        else if (away > home && team == '2') return 'Win'
+        else if (home == away && team == 'X') return 'Win'
+        else return 'Lost'
+    }
+    //Basketball markets
+
+    //Tennis
+    //Tennis
+
+    const Accounting = async (history, result, score) => {
+        var userData = await baseController.BfindOne(userModel, { _id: history.userId })
+        if (userData) {
+            if (history.type == "single") {
+                if (result == 'Win') {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: score, status: "win" })
+                    await baseController.BfindOneAndUpdate(userModel, { _id: history.userId }, { $inc: { 'balance': (Math.abs(Number(history.amount * Number(history.odds))) * 1) } })
+                    await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(Number(history.amount * Number(history.odds))) * -1) } })
+                } else if (result == "Lost") {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: score, status: "lose" })
+                } else if (result == "Cancel" || result == "refun") {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: 'No result', status: "refun" })
+                    await baseController.BfindOneAndUpdate(userModel, { _id: history.userId }, { $inc: { 'balance': (Math.abs(parseInt(history.amount)) * 1) } })
+                    await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history.amount)) * -1) } })
+                }
+            } else {
+                if (result == 'Win') {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: score, status: "win" })
+                } else if (result == "Lost") {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: score, status: "lose" })
+                } else if (result == "Cancel" || result == "refun") {
+                    await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history._id }, { result: 'No result', status: "refun" })
+                }
+                let oneBet = baseController.BfindOne(bwinHistoryModel, { _id: history._id })
+                let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
+                let flag = true
+                let winCount = 0, winOdds = 1
+                for (let j in mixBets) {
+                    if (mixBets[j].status == 'pendding') {
+                        flag = false
+                        if (mixBets[j].status == 'win') {
+                            winCount++
+                        }
+                    }
+                }
+                if (flag) {
+                    if (winCount == mixBets) {
+                        await baseController.BfindOneAndUpdate(userModel, { _id: history.userId }, { $inc: { 'balance': (Math.abs(parseInt(history.winAmount)) * 1) } })
+                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history.winAmount)) * -1) } })
+                    }
+                }
+            }
+        }
+    }
 
     const setScoreFinished = async () => {
         var data = await baseController.Bfind(bwinEventModel, { 'Scoreboard.period': 'Finished' })
@@ -399,48 +550,8 @@ module.exports = async (io) => {
                                 default:
                                     result = "Cancel"
                             }
-                            var userData = await baseController.BfindOne(userModel, { _id: history[j].userId })
-                            if (userData) {
-                                if (history[j].type == "single") {
-                                    if (result == 'Win') {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "win" })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * 1) } })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * -1) } })
-                                    } else if (result == "Lost") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "lose" })
-                                    } else if (result == "Cancel") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "refun" })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * -1) } })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
-                                    }
-                                } else {
-                                    if (result == 'Win') {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "win" })
-                                    } else if (result == "Lost") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "lose" })
-                                    } else if (result == "Cancel") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: home + "-" + away, status: "refun" })
-                                    }
-                                    let oneBet = baseController.BfindOne(bwinHistoryModel, { _id: history[j]._id })
-                                    let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
-                                    let flag = true
-                                    let winCount = 0, winOdds = 1
-                                    for (let j in mixBets) {
-                                        if (mixBets[j].status == 'pendding') {
-                                            flag = false
-                                            if (mixBets[j].status == 'win') {
-                                                winCount++
-                                            }
-                                        }
-                                    }
-                                    if (flag) {
-                                        if (winCount == mixBets) {
-                                            await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * 1) } })
-                                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * -1) } })
-                                        }
-                                    }
-                                }
-                            }
+
+                            await Accounting(history[j], home + "-" + away, score);
                         } else {
                             await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: 'No result', status: "refun" })
                             await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
@@ -452,7 +563,7 @@ module.exports = async (io) => {
                     var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null;
                     var score = rdata.ss;
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
-console.log(history)
+                    var result = ''
                     if (scores && score) {
                         for (let j in history) {
 
@@ -466,7 +577,6 @@ console.log(history)
                                 result = await whoWinSecond(scores, history[j].team)
                             } else if (history[j].marketType.startsWith("How many points will player/team 1 score in the")) {
                                 result = await howPoints(scores, history[j].period, history[j].team, 'home')
-                                console.log(result, '++++++++++++++')
                             } else if (history[j].marketType.startsWith("How many points will player/team 2 score in the")) {
                                 result = await howPoints(scores, history[j].period, history[j].team, 'away')
                             } else if (history[j].marketType.startsWith('Which Team/Player will score the ') && history[j].marketType.search('point in the')) {
@@ -489,65 +599,155 @@ console.log(history)
                                 result = 'refun'
                             } else if (history[j].marketType.indexOf('set handicap')) {
                                 result = await setHandicap(scores, history[j].period, history[j].name, history[j].team)
+                            } else {
+                                result = 'refun'
                             }
 
-                            var userData = await baseController.BfindOne(userModel, { _id: history[j].userId })
-                            if (userData) {
-                                if (history[j].type == "single") {
-                                    if (result == 'Win') {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "win" })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * 1) } })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount * Number(history[j].odds))) * -1) } })
-                                    } else if (result == "Lost") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "lose" })
-                                    } else if (result == "Cancel") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "refun" })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * -1) } })
-                                        await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].amount)) * 1) } })
-                                    }
-                                } else {
-                                    if (result == 'Win') {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "win" })
-                                    } else if (result == "Lost") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "lose" })
-                                    } else if (result == "Cancel") {
-                                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { _id: history[j]._id }, { result: score, status: "refun" })
-                                    }
-                                    let oneBet = baseController.BfindOne(bwinHistoryModel, { _id: history[j]._id })
-                                    let mixBets = baseController.Bfind(bwinHistoryModel, { betId: oneBet.betId })
-                                    let flag = true
-                                    let winCount = 0, winOdds = 1
-                                    for (let j in mixBets) {
-                                        if (mixBets[j].status == 'pendding') {
-                                            flag = false
-                                            if (mixBets[j].status == 'win') {
-                                                winCount++
-                                            }
-                                        }
-                                    }
-                                    if (flag) {
-                                        if (winCount == mixBets) {
-                                            await baseController.BfindOneAndUpdate(userModel, { _id: history[j].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * 1) } })
-                                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[j].winAmount)) * -1) } })
-                                        }
-                                    }
-                                }
-                            }
+                            await Accounting(history[j], result, score);
                         }
                     }
                 } else if (data[i].SportId == 7) {                                                                              //Basketball
-                    var scores = result.ss ? result.ss : "";
+                    var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null;
+                    var score = rdata.ss;
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
-                    var home, away;
-                    if (scores) {
-                        home = Number(scores.split('-')[0])
-                        away = Number(scores.split('-')[1])
-                    }
-                    for (let j in history) {
-                        if (scores) {
+                    var result = ''
+                    if (scores && score) {
+                        for (let j in history) {
+                            if (history[j].marketType == "Totals") {
+                                result = getTotal(score, history[j].team)
+                            } else if (history[j].marketType.indexOf("Quarter Totals") !== -1) {
+                                result = getQuarterTotal(scores, history[j].period, history[j].team)
+                            } else if (history[j].marketType == "Winning Margin") {
+                                result = 'refun'
+                            } else if (history[j].marketType == "Money Line") {
+                                result = getMoneyLine(score, history[j].team)
+                            } else if (history[j].marketType == "1st Quarter Money Line") {
+                                result = getFstMoneyLine(scores, history[j].team)
+                            } else if (history[j].marketType == "Handicap") {
+                                result = getBasketHdp(score, history[j].name, history[j].team, 'regularTime')
+                            } else if (history[j].marketType == "1st quarter handicap") {
+                                result = getBasketHdp(scores, history[j].name, history[j].team, '1st')
+                            } else if (history[j].marketType == "Will the 1st quarter total be odd or even?") {
+                                result = firstOddEven(scores, history[j].name)
+                            } else if (history[j].marketType == "Will the final score be odd or even?") {
+                                result = getBasketOddEven(score, history[j].name)
+                            } else if (history[j].marketType == "Three Way (Regular time only)") {
+                                result = getThreeWay(score, history[j].name, 'regularTime')
+                            } else if (history[j].marketType == "Three Way - (1st Quarter)") {
+                                result = getThreeWay(scores, history[j].name, 'firstTime')
+                            }
 
+                            await Accounting(history[j], result, score);
                         }
                     }
+                } else if (data[i].SportId == 5) {                                                                              //Tennis
+                    var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null;
+                    var score = rdata.ss;
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
+                    var result = ''
+                    if (scores && score) {
+                        for (let j in history) {
+                            if (history[j].marketType == "Match Winner") {
+
+                            } else if (history[j].marketType == "Set Betting") {
+
+                            } else if ((markets[i].name.value.startsWith('Set') && markets[i].name.value.search('Winner') >= 6)) {
+
+                            } else if (markets[i].name.value.startsWith('Total Games')) {
+
+                            } else if ((markets[i].name.value.startsWith('Game') && markets[i].name.value.search('Winner') >= 7 && markets[i].name.value.search('Set'))) {
+
+                            } else if (markets[i].name.value.startsWith('Correct Score -')) {
+
+                            } else if (markets[i].name.value.startsWith('Correct Score (Set')) {
+
+                            } else if (markets[i].name.value.startsWith('Game') && markets[i].name.value.indexOf('to Deuce,') !== -1) {
+
+                            }
+
+                            await Accounting(history[j], result, score);
+                        }
+                    }
+                } else if (data[i].SportId == 18) {
+                    // if (markets[i].name.value === "2Way - Who will win?") {
+                    //     if (index === 0) team = "1"
+                    //     if (index === 1) team = "2"
+                    //     period = 'RegularTime'
+                    // } else if (markets[i].name.value.startsWith("How many points will be scored in the")) {
+                    //     team = event.name.value
+
+                    //     let round = markets[i].name.value.split('How many points will be scored in the ')[1]
+                    //     if (round === 'match?') {
+                    //         period = 'RegularTime'
+                    //     } else {
+                    //         round = round.slice(0, 2)
+                    //         if (Number(round)) {
+                    //             period = String(Number(round))
+                    //         } else {
+                    //             period = round.slice(0, 1)
+                    //         }
+                    //     }
+                    // } else if (markets[i].name.value === "How many points will be scored in total?") {
+                    //     team = event.name.value
+                    //     period = 'RegularTime'
+                    // } else if (markets[i].name.value === "Total Points Handicap") {
+                    //     if (index === 0) team = "1"
+                    //     if (index === 1) team = "2"
+                    //     period = 'RegularTime'
+                    // } else if (markets[i].name.value.startsWith("Which team will win the ")) {
+                    //     if (index === 0) team = "1"
+                    //     if (index === 1) team = "2"
+
+                    //     let round = markets[i].name.value.split('Which team will win the ')[1]
+                    //     if (round === 'match?') {
+                    //         period = 'RegularTime'
+                    //     } else {
+                    //         round = round.slice(0, 2)
+                    //         if (Number(round)) {
+                    //             period = String(Number(round))
+                    //         } else {
+                    //             period = round.slice(0, 1)
+                    //         }
+                    //     }
+                    // } else if (markets[i].name.value.startsWith("Will the number of points in the ") && markets[i].name.value.indexOf('set be odd or even?')) {
+                    //     if (index === 0) team = "Odd"
+                    //     if (index === 1) team = "Even"
+
+                    //     let round = markets[i].name.value.split('Will the number of points in the ')[1]
+                    //     if (round.startsWith("match")) {
+                    //         period = 'RegularTime'
+                    //     } else {
+                    //         round = round.slice(0, 2)
+                    //         if (Number(round)) {
+                    //             period = String(Number(round))
+                    //         } else {
+                    //             period = round.slice(0, 1)
+                    //         }
+                    //     }
+                    // } else if (markets[i].name.value.startsWith('Correct Score')) {
+                    //     team = event.name.value
+
+                    //     const round = markets[i].name.value.slice(-3)
+                    //     period = String(Number(round.slice(0, 2)))
+                    // } else if (markets[i].name.value === 'Set Bet (best-of-five)') {
+                    //     team = event.name.value
+                    //     period = 'RegularTime'
+                    // } else if (markets[i].name.value === 'Result after first 2 sets') {
+                    //     if (index === 0) team = "1"
+                    //     if (index === 1) team = "Draw"
+                    //     if (index === 2) team = "2"
+                    //     period = '2'
+                    // } else if (markets[i].name.value === 'Who will win the match (set handicap)?') {
+                    //     if (index % 2 === 0) team = "1"
+                    //     else team = "2"
+                    //     period = 'RegularTime'
+                    // } else if (markets[i].name.value.startsWith('Will the match be decided in the ')) {
+                    //     if (index === 0) team = "Yes"
+                    //     if (index === 1) team = "No"
+
+                    //     const round = markets[i].name.value.split('Will the match be decided in the ')[1]
+                    //     period = String(Number(round.slice(0, 1)))
+                    // }
                 } else {
                     var result = response.data.results[0]
                     var scores = result.scores && result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] ? result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] : "";
@@ -574,8 +774,8 @@ console.log(history)
                     }
                 }
 
-                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
-                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result
@@ -956,7 +1156,7 @@ console.log(history)
     setInterval(async function () {
         console.log('live')
         await liveMatchBwin()
-    }, 1000 * 10)
+    }, 1000 * 30)
 
     setInterval(async function () {
         console.log("refresh premacth");
