@@ -13,6 +13,7 @@ const {
     bwinEventModel,
     bwinHistoryModel
 } = require("../models/bwinSportsModel");
+
 var prematchTeamNameData = "";
 var liveTeamNameData = "";
 var onlineUsers = {}
@@ -428,13 +429,207 @@ module.exports = async (io) => {
 
         if (home > away && team == '1') return 'Win'
         else if (away > home && team == '2') return 'Win'
-        else if (home == away && team == 'X') return 'Win'
+        else if (home == away && team == 'x') return 'Win'
         else return 'Lost'
     }
     //Basketball markets
 
     //Tennis
+    const getTennisWinner = async (score, team) => {
+        const sets = score.split(',');
+        let home = 0, away = 0;
+        for (const i in sets) {
+            home += Number(sets[i].split('-')[0]);
+            away += Number(sets[i].split('-')[1]);
+        }
+
+        if (home > away && team == '1') return 'Win'
+        else if (home < away && team == '1') return 'Win'
+        else return 'Lost'
+    }
+
+    const getTennisSetBetting = async (score, team) => {
+        const sets = score.split(',');
+        let home = 0, away = 0;
+        for (const i in sets) {
+            if (Number(sets[i].split('-')[0]) > Number(sets[i].split('-')[1])) {
+                home++;
+            } else if (Number(sets[i].split('-')[0]) < Number(sets[i].split('-')[1])) {
+                away++;
+            } else {
+                home++;
+                away++;
+            }
+        }
+
+        if (home == Number(team.split('-')[0]) && away == Number(team.split('-')[1])) return 'Win';
+        else return 'Lost';
+    }
+
+    const getTennisSetWinner = async (scores, period, team) => {
+        if (!scores[period]) return 'refun';
+
+        const home = scores[period].home;
+        const away = scores[period].away;
+
+        if (home > away && team == '1') return 'Win';
+        else if (home < away && team == '2') return 'Win';
+        else return 'Lost';
+    }
+
+    const getTennisTotalGame = async (scores, period, team) => {
+        let total = 0;
+        if (period == 'RegularTime') {
+            for (const i in scores) {
+                total += Number(scores[i].home);
+                total += Number(scores[i].away);
+            }
+        } else {
+            if (!scores[period]) return 'refun';
+
+            total += Number(scores[period].home);
+            total += Number(scores[period].away);
+        }
+
+        if (team.indexOf('Over') != -1) {
+            const val = Number(team.split(',')[0].slice(-2))
+            if (val && total > val) return 'Win';
+            else return 'Lost';
+        } else if (team.indexOf('Under') != -1) {
+            const val = Number(team.split(',')[0].slice(-2))
+            if (val && total < val) return 'Win';
+            else return 'Lost';
+        } else if (team.indexOf('games or more') != -1) {
+            const val = Number(team.slice(0, 2))
+            if (total == val || total < val) return 'Win';
+            else return 'Lost';
+        } else if (team.indexOf('games') != -1) {
+            team = team.toLowerCase();
+            const val = team.split('games')[0];
+            const val1 = Number(val.split(' - ')[0]);
+            const val2 = Number(val.split(' - ')[1]);
+            if (total >= val1 || total <= val2) return 'Win';
+            else return 'Lost';
+        }
+    }
+
+    const getTennisGameWinner = async (scores, period, team) => {
+        const set = period.split(',')[0];
+        const game = Number(period.split(',')[1]);
+        if (!scores[set]) return 'refun';
+        const home = Number(scores[set].home)
+        const away = Number(scores[set].away);
+
+        if (team == '1') {
+            if (home == game) return 'Win';
+            else return 'Lost';
+        } else if (team == '2') {
+            if (away == game) return 'Win';
+            else return 'Lost';
+        } else return 'Lost';
+    }
+
+    const getTennisCorrect = async (scores, period, team) => {
+        if (!scores[period]) return 'refun';
+        const home = Number(scores[period].home);
+        const away = Number(scores[period].away);
+
+        const sHome = Number(team.split('-')[0]);
+        const sAway = Number(team.split('-')[1]);
+
+        if (home == sHome && away == sAway) return 'Win';
+        else return 'Lost';
+    }
+
+    const getTennisSetCorrect = async (score, period, team) => {
+    }
+
     //Tennis
+
+
+    //Volleyball
+    const getHowPointScored = async (scores, period, team) => {
+        let total = 0;
+        if (period == 'RegularTime') {
+            for (const i in scores) {
+                total += Number(scores[i].home);
+                total += Number(scores[i].away);
+            }
+        } else {
+            if (!scores[period]) return 'refun';
+            total += Number(scores[period].home);
+            total += Number(scores[period].away);
+        }
+
+        if (team.startsWith('Over')) {
+            let val = Number(team.split(',')[0].slice(-3));
+            if (val > total) return 'Win';
+            else return 'Lost';
+        } else if (team.startsWith('Under')) {
+            let val = Number(team.split(',')[0].slice(-3));
+            if (val < total) return 'Win';
+            else return 'Lost';
+        } else return 'refun';
+    }
+
+    const getVolleyballHdp = async (score, name, team) => {
+        const home = Number(score.split('-')[0]);
+        const away = Number(score.split('-')[1]);
+        const val = Number(name.split(',')[0].slice(-3));
+
+        if (team == '1') {
+            if ((home + val) > away) return 'Win';
+            else return 'Lost';
+        } else {
+            if ((away + val) > home) return 'Win';
+            else return 'Lost';
+        }
+    }
+
+    const getWhichTeamWin = async (scores, period, team) => {
+        if (!scores[period]) return 'refun';
+        const home = Number(scores[period].home);
+        const away = Number(scores[period].away);
+
+        if (home > away && team == '1') return 'Win';
+        else if (home < away && team == '2') return 'Win';
+        else return 'Lost';
+    }
+
+    const getOddEvenSet = async (scores, period, team) => {
+        if (!scores[period]) return 'refun';
+        const total = Number(scores[period].home) + Number(scores[period].away);
+        if ((total % 2 === 0) && team == 'Even') return 'Win';
+        else if ((total % 2 === 1) && team == 'Odd') return 'Win';
+        else return 'Lost';
+    }
+
+    const getVolleyballSocre = async (scores, period, team) => {
+        if (!scores[period]) return 'refun';
+        const home = Number(scores[period].home);
+        const away = Number(scores[period].away);
+        const cHome = Number(team.split('-')[0]);
+        const cAway = Number(team.split('-')[1]);
+
+        if (home == cHome && away == cAway) return 'Win';
+        else return 'Lost';
+    }
+
+    const getVolleyballSetBet = async (score, team) => {
+        const home = Number(score.split('-')[0]);
+        const away = Number(score.split('-')[1]);
+        const cHome = Number(team.split('-')[0]);
+        const cAway = Number(team.split('-')[1]);
+        if (home == away && cHome == cAway) return 'Win';
+        else return 'refun';
+    }
+
+    const getVolleyballDecided = async (scores, period, team) => {
+        const count = Object.keys(scores).length;
+        if (count == Number(period)) return 'Win';
+        else return 'Lost';
+    }
+    //Volleyball
 
     const Accounting = async (history, result, score) => {
         var userData = await baseController.BfindOne(userModel, { _id: history.userId })
@@ -491,7 +686,6 @@ module.exports = async (io) => {
             var response = await axios(config);
             if (response.data.results.length > 0 && response.data.success) {
                 var rdata = response.data.results[0]
-
                 if (data[i].SportId == 4) {                                                                                     //Football
                     var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
@@ -614,27 +808,27 @@ module.exports = async (io) => {
                     if (scores && score) {
                         for (let j in history) {
                             if (history[j].marketType == "Totals") {
-                                result = getTotal(score, history[j].team)
+                                result = await getTotal(score, history[j].team)
                             } else if (history[j].marketType.indexOf("Quarter Totals") !== -1) {
-                                result = getQuarterTotal(scores, history[j].period, history[j].team)
+                                result = await getQuarterTotal(scores, history[j].period, history[j].team)
                             } else if (history[j].marketType == "Winning Margin") {
-                                result = 'refun'
+                                result = await 'refun'
                             } else if (history[j].marketType == "Money Line") {
-                                result = getMoneyLine(score, history[j].team)
+                                result = await getMoneyLine(score, history[j].team)
                             } else if (history[j].marketType == "1st Quarter Money Line") {
-                                result = getFstMoneyLine(scores, history[j].team)
+                                result = await getFstMoneyLine(scores, history[j].team)
                             } else if (history[j].marketType == "Handicap") {
-                                result = getBasketHdp(score, history[j].name, history[j].team, 'regularTime')
+                                result = await getBasketHdp(score, history[j].name, history[j].team, 'regularTime')
                             } else if (history[j].marketType == "1st quarter handicap") {
-                                result = getBasketHdp(scores, history[j].name, history[j].team, '1st')
+                                result = await getBasketHdp(scores, history[j].name, history[j].team, '1st')
                             } else if (history[j].marketType == "Will the 1st quarter total be odd or even?") {
-                                result = firstOddEven(scores, history[j].name)
+                                result = await firstOddEven(scores, history[j].name)
                             } else if (history[j].marketType == "Will the final score be odd or even?") {
-                                result = getBasketOddEven(score, history[j].name)
+                                result = await getBasketOddEven(score, history[j].name)
                             } else if (history[j].marketType == "Three Way (Regular time only)") {
-                                result = getThreeWay(score, history[j].name, 'regularTime')
+                                result = await getThreeWay(score, history[j].team, 'regularTime')
                             } else if (history[j].marketType == "Three Way - (1st Quarter)") {
-                                result = getThreeWay(scores, history[j].name, 'firstTime')
+                                result = await getThreeWay(scores, history[j].team, 'firstTime')
                             }
 
                             await Accounting(history[j], result, score);
@@ -648,134 +842,68 @@ module.exports = async (io) => {
                     if (scores && score) {
                         for (let j in history) {
                             if (history[j].marketType == "Match Winner") {
-
+                                result = await getTennisWinner(score, history[j].team)
                             } else if (history[j].marketType == "Set Betting") {
-
+                                result = await getTennisSetBetting(score, history[j].team)
                             } else if ((markets[i].name.value.startsWith('Set') && markets[i].name.value.search('Winner') >= 6)) {
-
+                                result = await getTennisSetWinner(scores, history[j].period, history[j].team)
                             } else if (markets[i].name.value.startsWith('Total Games')) {
-
+                                result = await getTennisTotalGame(scores, history[j].period, history[j].team)
                             } else if ((markets[i].name.value.startsWith('Game') && markets[i].name.value.search('Winner') >= 7 && markets[i].name.value.search('Set'))) {
-
+                                result = await getTennisGameWinner(scores, history[j].period, history[j].team)
                             } else if (markets[i].name.value.startsWith('Correct Score -')) {
-
+                                result = await getTennisCorrect(scores, history[j].period, history[j].team)
                             } else if (markets[i].name.value.startsWith('Correct Score (Set')) {
-
+                                // result = await getTennisSetCorrect(scores, history[j].period, history[j].team)
+                                result = 'refun'
                             } else if (markets[i].name.value.startsWith('Game') && markets[i].name.value.indexOf('to Deuce,') !== -1) {
-
+                                // result = await getTennisDeuce(scores, history[j].period, history[j].team)
+                                result = 'refun'
                             }
 
                             await Accounting(history[j], result, score);
                         }
                     }
                 } else if (data[i].SportId == 18) {
-                    // if (markets[i].name.value === "2Way - Who will win?") {
-                    //     if (index === 0) team = "1"
-                    //     if (index === 1) team = "2"
-                    //     period = 'RegularTime'
-                    // } else if (markets[i].name.value.startsWith("How many points will be scored in the")) {
-                    //     team = event.name.value
+                    var scores = rdata.scores && Object.keys(rdata.scores).length > 0 ? rdata.scores : null;
+                    var score = rdata.ss;
+                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
+                    var result = ''
+                    if (scores && score) {
+                        for (let j in history) {
+                            if (markets[i].name.value === "2Way - Who will win?") {
+                                result = await whoWin(score, history[j].team)
+                            } else if (markets[i].name.value.startsWith("How many points will be scored in the")) {
+                                result = await getHowPointScored(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value === "How many points will be scored in total?") {
+                                result = await getHowPointScored(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value === "Total Points Handicap") {
+                                result = await getVolleyballHdp(score, history[j].name, history[j].team)
+                            } else if (markets[i].name.value.startsWith("Which team will win the ")) {
+                                result = await getWhichTeamWin(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value.startsWith("Will the number of points in the ") && markets[i].name.value.indexOf('set be odd or even?')) {
+                                result = await getOddEvenSet(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value.startsWith('Correct Score')) {
+                                result = await getVolleyballSocre(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value === 'Set Bet (best-of-five)') {
+                                result = await getVolleyballSetBet(scores, history[j].period, history[j].team)
+                            } else if (markets[i].name.value === 'Result after first 2 sets') {
+                                result = 'refun'
+                            } else if (markets[i].name.value === 'Who will win the match (set handicap)?') {
+                                result = await getVolleyballHdp(score, history[j].name, history[j].team)
+                            } else if (markets[i].name.value.startsWith('Will the match be decided in the ')) {
+                                result = await getVolleyballDecided(scores, history[j].period, history[j].team)
+                            }
 
-                    //     let round = markets[i].name.value.split('How many points will be scored in the ')[1]
-                    //     if (round === 'match?') {
-                    //         period = 'RegularTime'
-                    //     } else {
-                    //         round = round.slice(0, 2)
-                    //         if (Number(round)) {
-                    //             period = String(Number(round))
-                    //         } else {
-                    //             period = round.slice(0, 1)
-                    //         }
-                    //     }
-                    // } else if (markets[i].name.value === "How many points will be scored in total?") {
-                    //     team = event.name.value
-                    //     period = 'RegularTime'
-                    // } else if (markets[i].name.value === "Total Points Handicap") {
-                    //     if (index === 0) team = "1"
-                    //     if (index === 1) team = "2"
-                    //     period = 'RegularTime'
-                    // } else if (markets[i].name.value.startsWith("Which team will win the ")) {
-                    //     if (index === 0) team = "1"
-                    //     if (index === 1) team = "2"
-
-                    //     let round = markets[i].name.value.split('Which team will win the ')[1]
-                    //     if (round === 'match?') {
-                    //         period = 'RegularTime'
-                    //     } else {
-                    //         round = round.slice(0, 2)
-                    //         if (Number(round)) {
-                    //             period = String(Number(round))
-                    //         } else {
-                    //             period = round.slice(0, 1)
-                    //         }
-                    //     }
-                    // } else if (markets[i].name.value.startsWith("Will the number of points in the ") && markets[i].name.value.indexOf('set be odd or even?')) {
-                    //     if (index === 0) team = "Odd"
-                    //     if (index === 1) team = "Even"
-
-                    //     let round = markets[i].name.value.split('Will the number of points in the ')[1]
-                    //     if (round.startsWith("match")) {
-                    //         period = 'RegularTime'
-                    //     } else {
-                    //         round = round.slice(0, 2)
-                    //         if (Number(round)) {
-                    //             period = String(Number(round))
-                    //         } else {
-                    //             period = round.slice(0, 1)
-                    //         }
-                    //     }
-                    // } else if (markets[i].name.value.startsWith('Correct Score')) {
-                    //     team = event.name.value
-
-                    //     const round = markets[i].name.value.slice(-3)
-                    //     period = String(Number(round.slice(0, 2)))
-                    // } else if (markets[i].name.value === 'Set Bet (best-of-five)') {
-                    //     team = event.name.value
-                    //     period = 'RegularTime'
-                    // } else if (markets[i].name.value === 'Result after first 2 sets') {
-                    //     if (index === 0) team = "1"
-                    //     if (index === 1) team = "Draw"
-                    //     if (index === 2) team = "2"
-                    //     period = '2'
-                    // } else if (markets[i].name.value === 'Who will win the match (set handicap)?') {
-                    //     if (index % 2 === 0) team = "1"
-                    //     else team = "2"
-                    //     period = 'RegularTime'
-                    // } else if (markets[i].name.value.startsWith('Will the match be decided in the ')) {
-                    //     if (index === 0) team = "Yes"
-                    //     if (index === 1) team = "No"
-
-                    //     const round = markets[i].name.value.split('Will the match be decided in the ')[1]
-                    //     period = String(Number(round.slice(0, 1)))
-                    // }
-                } else {
-                    var result = response.data.results[0]
-                    var scores = result.scores && result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] ? result.scores[Object.keys(result.scores)[Object.keys(result.scores).length - 1]] : "";
-                    if (data[i].SportId === 4 || data[i].SportId === 12 || data[i].SportId === 16) {
-                        var index = scores && scores.home < scores.away ? 2 : 0;
-                    } else {
-                        var index = scores && scores.home < scores.away ? 1 : 0;
-                    }
-                    var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, index: index })
-                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id })
-                    if (isCheckHistory.length > 0) {
-                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].Id }, { result: home + "-" + away, status: "lose" })
-                    }
-                    for (var i in history) {
-                        var userData = await baseController.BfindOne(userModel, { _id: history[i].userId })
-                        if (userData) {
-                            await baseController.BfindOneAndUpdate(userModel, { _id: history[i].userId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * 1) } })
-                            await baseController.BfindOneAndUpdate(userModel, { _id: userData.agentId }, { $inc: { 'balance': (Math.abs(parseInt(history[i].amount * history[i].odds)) * -1) } })
+                            await Accounting(history[j], result, score);
                         }
                     }
-                    var isCheckHistory = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, index: index })
-                    if (isCheckHistory.length > 0) {
-                        await baseController.BfindOneAndUpdate(bwinHistoryModel, { matchId: data[i].Id, index: index }, { result: home + "-" + away, status: "win" })
-                    }
+                } else {
+                    await Accounting(history[j], 'refun')
                 }
 
-                await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
-                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
+                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result
