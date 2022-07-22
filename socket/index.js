@@ -2,6 +2,7 @@ const { default: axios } = require("axios");
 const getUuid = require('uuid-by-string')
 const fs = require('fs');
 const baseController = require("../controller/baseController");
+const sportsController = require("../controller/sportsController");
 const { token, sportList, } = require("../config/index");
 const { paymentHistoryModel } = require('../models/paymentHistoryModel');
 const { userModel } = require("../models/userModel");
@@ -1263,6 +1264,7 @@ module.exports = async (io) => {
         await removeOldMatchs()
         await liveMatchBwin()
         await preMatchBwin()
+        await sportsController.clear()
 
         let userData = await baseController.BfindOne(userModel, { userId: "admin" });
         if (!userData) {
