@@ -909,8 +909,8 @@ module.exports = async (io) => {
                     await Accounting(history[j], 'refun')
                 }
 
-                // await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
-                // await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinEventModel, { Id: data[i].Id });
+                await baseController.BfindOneAndDelete(bwinInPlayModel, { Id: data[i].Id });
                 // var saveData = {
                 //   ...data.selectedResult[j],
                 //   result: data.result
@@ -1036,25 +1036,23 @@ module.exports = async (io) => {
                             await baseController.BfindOneAndDelete(bwinPrematchModel, { Id: saveData.Id });
                             if (saveData.Scoreboard.period == 'Finished') {
 
-                                console.log('-Finished-', saveData.Id)
-
                                 var isFinish = await baseController.BfindOne(bwinInPlayModel, { Id: saveData.Id })
 
                                 if (isFinish) {
-                                    console.log('there is in Inplay')
                                     isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData);
                                 }
                                 let isThere = await baseController.BfindOne(bwinEventModel, { Id: saveData.Id })
                                 if (isThere) {
-                                    console.log('there is in Event', saveData.Id)
                                     tempEventIds += saveData.Id
                                 }
+
+                                if(isFinish && isThere) console.log('-Finished-', saveData.Id)
                             } else {
                                 isCheck = await baseController.BfindOneAndUpdate(bwinInPlayModel, { Id: saveData.Id }, saveData);
                                 tempEventIds += saveData.Id
                             }
                             if (!isCheck) {
-                                console.log("---Didn't save this match on Inplay : " + saveData.Id + "---");
+                                console.log("-Didn't save this match on Inplay : " + saveData.Id + "-");
                             }
                             if (j + 1 != (i + 1) * 10) {
                                 tempEventIds += ","
