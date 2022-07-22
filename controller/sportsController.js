@@ -852,5 +852,6 @@ exports.clear = async (req, res, nex) => {
     await bwinPrematchModel.deleteMany()
     await bwinInPlayModel.deleteMany()
     await bwinEventModel.deleteMany()
+    console.log('sports DB cleared')
     res.json({ status: 200 })
 }

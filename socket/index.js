@@ -81,17 +81,22 @@ module.exports = async (io) => {
     }
 
     const getOverUnder = (h_score, a_score, oddType, name) => {
-        let values = name.split(",")
-        let home = values[0].replace(oddType + " ", "")
-        let away = values[1]
-
-        if (type == "Over") {
-            if (h_score > Number(home) && a_score > Number(away)) return "Win"
-            else return "Lost"
-        }
-        if (type == "Under") {
-            if (h_score < Number(home) && a_score < Number(away)) return "Win"
-            else return "Lost"
+        try{
+            let values = name.split(",")
+            let home = values[0].replace(oddType + " ", "")
+            let away = values[1]
+    
+            if (type == "Over") {
+                if (h_score > Number(home) && a_score > Number(away)) return "Win"
+                else return "Lost"
+            }
+            if (type == "Under") {
+                if (h_score < Number(home) && a_score < Number(away)) return "Win"
+                else return "Lost"
+            }
+        } catch(error) {
+            console.log("can't get over/uner");
+            return 'refun';
         }
     }
 
