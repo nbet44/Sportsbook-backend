@@ -697,6 +697,7 @@ module.exports = async (io) => {
                     var history = await baseController.Bfind(bwinHistoryModel, { matchId: data[i].Id, status: "pending" })
                     var result, home, away, home1, away1, home2, away2
                     if (scores) {
+                        console.log(scores)
                         result = ""
                         home = Number(scores['2'].home)
                         away = Number(scores['2'].away)
