@@ -1265,7 +1265,6 @@ module.exports = async (io) => {
         await removeOldMatchs()
         await liveMatchBwin()
         await preMatchBwin()
-        await sportsController.clear()
 
         let userData = await baseController.BfindOne(userModel, { userId: "admin" });
         if (!userData) {
